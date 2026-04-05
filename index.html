@@ -586,6 +586,7 @@ body {
   margin-top: 8px;
 }
 .expand-btn:active { background: var(--accent-20); }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── スケジュールカード（当日の施術） ── */
 .schedule-card {
@@ -1118,6 +1119,14 @@ body {
   </div>
 </div>
 
+<!-- ===== 保存中オーバーレイ ===== -->
+<div id="saving-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:500; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:32px 48px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+    <div style="width:36px; height:36px; border:3px solid #E8E6E1; border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 16px;"></div>
+    <div style="font-size:16px; font-weight:600; color:var(--text);" id="saving-text">保存中...</div>
+  </div>
+</div>
+
 <!-- ===== 写真拡大ビューア ===== -->
 <div id="photo-viewer" class="photo-viewer" onclick="if(event.target===this)this.classList.remove('show')">
   <button class="photo-viewer-close" onclick="document.getElementById('photo-viewer').classList.remove('show')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
@@ -1142,6 +1151,17 @@ let editingRecordId = null;  // 編集中の施術記録ID
 let staffList = [];          // yoyaku_staffから取得
 let roomList = [];           // yoyaku_roomsから取得
 let pendingPhotos = [];      // アップロード待ちの写真 [{file, type, angle, dataUrl}]
+let isSaving = false;        // 二重送信防止フラグ
+
+function showSaving(text) {
+  isSaving = true;
+  document.getElementById('saving-text').textContent = text || '保存中...';
+  document.getElementById('saving-overlay').style.display = 'flex';
+}
+function hideSaving() {
+  isSaving = false;
+  document.getElementById('saving-overlay').style.display = 'none';
+}
 
 // ── Supabase REST API ──
 async function sbGet(table, query) {
@@ -1575,6 +1595,8 @@ function editRecord(id) {
 }
 
 async function saveRecord() {
+  if (isSaving) return;
+  showSaving('カルテを保存中...');
   const data = {
     customer_id: currentCustomer.id,
     date: document.getElementById('rec-date').value || todayStr(),
@@ -1605,8 +1627,10 @@ async function saveRecord() {
     if (courseId && !editingRecordId) {
       await consumeCourse(courseId);
     }
+    hideSaving();
     showScreen('karte');
   } else {
+    hideSaving();
     alert('保存に失敗しました');
   }
 }
@@ -2293,8 +2317,10 @@ function quickRegister(name, reservationId) {
 }
 
 async function saveNewCustomer() {
+  if (isSaving) return;
   const name = document.getElementById('new-name').value.trim();
   if (!name) { alert('名前を入力してください'); return; }
+  showSaving('登録中...');
   const phone = normalizePhone(document.getElementById('new-phone').value);
   const data = {
     name,
@@ -2310,10 +2336,12 @@ async function saveNewCustomer() {
       await sbPatch('yoyaku_reservations', `id=eq.${pendingReservationId}`, { customer_id: result.id, name: result.name });
       pendingReservationId = null;
     }
+    hideSaving();
     closeModal('modal-new-customer');
     currentCustomer = result;
     showScreen('karte');
   } else {
+    hideSaving();
     alert('登録に失敗しました。電話番号が重複している可能性があります。');
   }
 }
@@ -2332,8 +2360,10 @@ function showEditCustomerModal() {
 }
 
 async function saveEditCustomer() {
+  if (isSaving) return;
   const name = document.getElementById('edit-name').value.trim();
   if (!name) { alert('名前を入力してください'); return; }
+  showSaving('保存中...');
   const phone = normalizePhone(document.getElementById('edit-phone').value);
   const data = {
     name,
@@ -2346,10 +2376,12 @@ async function saveEditCustomer() {
   if (result) {
     // 紐付いてる予約の名前も同期
     await sbPatch('yoyaku_reservations', `customer_id=eq.${currentCustomer.id}`, { name: name });
+    hideSaving();
     currentCustomer = result;
     closeModal('modal-edit-customer');
     loadKarteScreen();
   } else {
+    hideSaving();
     alert('保存に失敗しました。電話番号が重複している可能性があります。');
   }
 }
