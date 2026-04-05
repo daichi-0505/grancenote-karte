@@ -136,18 +136,18 @@ body {
 .list-item {
   display: flex;
   align-items: center;
-  padding: 14px 18px;
+  padding: 14px 4px;
   border-bottom: 1px solid var(--border-list);
   cursor: pointer;
-  gap: 12px;
+  gap: 16px;
   transition: background 0.15s;
   margin: 0;
 }
 .list-item:last-child { border-bottom: none; }
 .list-item:active { background: #FAF8F5; }
-.list-name { font-size: 17px; font-weight: 600; flex: 1; }
-.list-sub { font-size: 14px; color: var(--sub); }
-.list-date { font-size: 14px; color: var(--muted); min-width: 50px; text-align: right; }
+.list-name { font-size: 17px; font-weight: 600; flex: 1; white-space: nowrap; }
+.list-sub { font-size: 14px; color: var(--sub); white-space: nowrap; }
+.list-date { font-size: 14px; color: var(--muted); white-space: nowrap; text-align: right; }
 .list-chevron {
   width: 18px; height: 18px; flex-shrink: 0;
 }
