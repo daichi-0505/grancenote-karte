@@ -2321,7 +2321,7 @@ function renderSegmentResults() {
       <div class="avatar">${esc(c.name).charAt(0)}</div>
       <div style="flex:1;">
         <div class="list-name">${esc(c.name)}</div>
-        <div class="list-sub">${c._lastVisit ? '最終:'+fmtDate(c._lastVisit) : '未来店'}${c._visitCount ? ' / '+c._visitCount+'回' : ''}${c.phone ? ' / '+formatPhone(c.phone) : ''}</div>
+        <div class="list-sub">${c._lastVisit ? '最終:'+fmtDateFull(c._lastVisit) : '未来店'}${c._visitCount ? ' / '+c._visitCount+'回' : ''}${c.phone ? ' / '+formatPhone(c.phone) : ''}</div>
       </div>
       ${CHEVRON}
     </div>
