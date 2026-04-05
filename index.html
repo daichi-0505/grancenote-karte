@@ -179,6 +179,50 @@ body {
   white-space: nowrap;
 }
 
+/* ── 施術カード（1回ごと） ── */
+.record-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.record-card:active { transform: scale(0.98); }
+.record-card-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.record-card-date {
+  font-size: 14px; font-weight: 700; color: var(--accent-dark);
+  min-width: 70px;
+}
+.record-card-menu {
+  font-size: 17px; font-weight: 600; flex: 1;
+}
+.record-card-staff {
+  font-size: 13px; color: var(--sub);
+}
+.record-card-body {
+  display: flex; gap: 16px; font-size: 14px; color: var(--sub);
+}
+.record-card-body > div { display: flex; align-items: center; gap: 4px; }
+.record-card-memo {
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid var(--border-list);
+  font-size: 14px; color: var(--text);
+  line-height: 1.5;
+}
+.record-card-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 12px; font-weight: 600;
+  background: var(--accent-20);
+  color: var(--accent-dark);
+}
+
 /* ── ボタン ── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -540,21 +584,30 @@ body {
 <div id="screen-karte" class="screen">
   <div class="header">
     <button class="header-back" onclick="showScreen('search')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <div>
-      <div class="header-title" id="karte-name"></div>
-      <div class="header-sub" id="karte-info"></div>
-    </div>
-    <button class="btn btn-sm btn-outline" onclick="printKarte(10)" title="印刷"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
+    <div class="header-title" id="karte-name" style="flex:1;"></div>
+    <button class="btn btn-sm btn-outline" onclick="printKarte(10)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
     <button class="btn btn-sm btn-outline" onclick="showEditCustomerModal()">編集</button>
   </div>
 
-  <div id="karte-staff-memo" class="staff-memo-box"></div>
-
-  <div style="margin:8px 16px;">
-    <div id="karte-courses" style="display:flex; flex-wrap:wrap;"></div>
-    <button class="btn btn-sm btn-outline" onclick="showAddCourseModal()" style="margin-top:4px;">+ コース追加</button>
+  <!-- サマリーカード -->
+  <div class="card" id="karte-summary" style="border-left-color: var(--accent);">
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+      <div class="avatar" id="karte-avatar" style="width:52px;height:52px;border-radius:26px;font-size:20px;"></div>
+      <div style="flex:1;">
+        <div style="font-size:18px; font-weight:700;" id="karte-summary-name"></div>
+        <div style="font-size:14px; color:var(--sub);" id="karte-summary-info"></div>
+      </div>
+    </div>
+    <div id="karte-staff-memo" class="staff-memo-box" style="margin:0 0 12px;"></div>
+    <div id="karte-courses" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn btn-sm btn-outline" onclick="showAddCourseModal()">+ コース追加</button>
+      <button class="btn btn-sm btn-outline" onclick="showAddPurchaseModal()">+ 購入追加</button>
+      <button class="btn btn-sm btn-outline" onclick="showAddAdsModal()">+ ADS</button>
+    </div>
   </div>
 
+  <!-- タブ -->
   <div class="tabs">
     <div class="tab active" data-tab="history" onclick="switchTab(this)">施術履歴</div>
     <div class="tab" data-tab="photos" onclick="switchTab(this)">写真</div>
@@ -562,9 +615,12 @@ body {
     <div class="tab" data-tab="ads" onclick="switchTab(this)">ADS</div>
   </div>
 
-  <div id="tab-history" class="tab-content" style="margin:0 16px;">
+  <!-- 施術履歴タブ（カード形式） -->
+  <div id="tab-history" class="tab-content" style="margin:8px 16px;">
     <div id="history-list" class="loading">読み込み中...</div>
   </div>
+
+  <!-- 写真タブ -->
   <div id="tab-photos" class="tab-content" style="display:none; margin:12px 16px;">
     <div id="photos-compare" style="display:none; margin-bottom:12px;">
       <div class="card-title">ビフォーアフター比較</div>
@@ -579,6 +635,8 @@ body {
     </div>
     <div id="photos-list"></div>
   </div>
+
+  <!-- 購入タブ -->
   <div id="tab-purchases" class="tab-content" style="display:none; margin:12px 16px;">
     <div id="purchases-alerts"></div>
     <div id="purchases-list"></div>
@@ -586,6 +644,8 @@ body {
       <button class="btn btn-outline btn-block btn-sm" onclick="showAddPurchaseModal()">+ 店頭購入を追加</button>
     </div>
   </div>
+
+  <!-- ADSタブ -->
   <div id="tab-ads" class="tab-content" style="display:none; margin:12px 16px;">
     <div id="ads-list"></div>
     <div style="margin-top:12px;">
@@ -1085,10 +1145,22 @@ async function loadKarteScreen() {
 
   // ヘッダー
   document.getElementById('karte-name').textContent = c.name;
+
+  // サマリーカード
+  document.getElementById('karte-avatar').textContent = c.name.charAt(0);
+  document.getElementById('karte-summary-name').textContent = c.name;
   const infoParts = [];
   if (c.birthday) infoParts.push(fmtDate(c.birthday));
   if (c.phone) infoParts.push(formatPhone(c.phone));
-  document.getElementById('karte-info').textContent = infoParts.join('  ');
+
+  // 来店回数を取得
+  const allRecords = await sbGet('karte_records',
+    `customer_id=eq.${c.id}&order=date.desc,created_at.desc&limit=50`);
+  if (allRecords.length > 0) {
+    infoParts.push(`来店${allRecords.length}回`);
+    infoParts.push(`最終 ${fmtDate(allRecords[0].date)}`);
+  }
+  document.getElementById('karte-summary-info').textContent = infoParts.join(' / ');
 
   // スタッフメモ
   document.getElementById('karte-staff-memo').textContent = c.memo || '';
@@ -1102,21 +1174,32 @@ async function loadKarteScreen() {
     return `<div class="course-badge ${low ? 'low' : ''}">${esc(co.course_name)} 残${remaining}/${co.total_count}回</div>`;
   }).join('');
 
-  // 施術履歴
-  const records = await sbGet('karte_records',
-    `customer_id=eq.${c.id}&order=date.desc,created_at.desc&limit=50`);
+  // 施術履歴（カード形式）
   const histList = document.getElementById('history-list');
-  if (records.length === 0) {
+  if (allRecords.length === 0) {
     histList.innerHTML = '<div class="empty-state">施術記録がまだありません</div>';
   } else {
-    histList.innerHTML = records.map(r => `
-      <div class="record-row" onclick="editRecord('${r.id}')">
-        <div class="record-date">${fmtDate(r.date)}</div>
-        <div class="record-menu">${esc(r.menu || '(メニュー未入力)')}</div>
-        <div class="record-duration">${r.duration_min ? r.duration_min + '分' : ''}</div>
-        <div class="record-staff">${staffName(r.staff_id)}</div>
-      </div>
-    `).join('');
+    histList.innerHTML = allRecords.map(r => {
+      let bodyHtml = '';
+      if (r.duration_min) bodyHtml += `<div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8C8C8C" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> ${r.duration_min}分</div>`;
+      if (r.staff_id) bodyHtml += `<div>${staffName(r.staff_id)}</div>`;
+      if (r.room_id) bodyHtml += `<div>${roomName(r.room_id)}</div>`;
+
+      let memoHtml = '';
+      if (r.skin_condition) memoHtml += `<div><span style="font-weight:600;color:var(--accent-dark);">肌:</span> ${esc(r.skin_condition)}</div>`;
+      if (r.talk_memo) memoHtml += `<div><span style="font-weight:600;color:var(--accent-dark);">会話:</span> ${esc(r.talk_memo)}</div>`;
+      if (r.staff_memo) memoHtml += `<div><span style="font-weight:600;color:var(--danger);">共有:</span> ${esc(r.staff_memo)}</div>`;
+
+      return `<div class="record-card" onclick="editRecord('${r.id}')">
+        <div class="record-card-header">
+          <div class="record-card-date">${fmtDateFull(r.date)}</div>
+          <div class="record-card-menu">${esc(r.menu || '(未入力)')}</div>
+          ${CHEVRON}
+        </div>
+        ${bodyHtml ? `<div class="record-card-body">${bodyHtml}</div>` : ''}
+        ${memoHtml ? `<div class="record-card-memo">${memoHtml}</div>` : ''}
+      </div>`;
+    }).join('');
   }
 
   // デフォルトタブ
