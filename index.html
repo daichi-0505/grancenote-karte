@@ -1218,6 +1218,56 @@ async function sbDelete(table, query) {
   return res.ok;
 }
 
+// ── 検索ヘルパー（ひらがな⇔カタカナ変換・異体字展開） ──
+function toKatakana(s) {
+  return s.replace(/[\u3041-\u3096]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+}
+function toHiragana(s) {
+  return s.replace(/[\u30A1-\u30F6]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+}
+
+// 異体字・同音異字マッピング（苗字でよく間違われるもの）
+const KANJI_VARIANTS = [
+  ['高','髙'],['崎','﨑','嵜'],['沢','澤'],['辺','邉','邊'],['浜','濱','濵'],
+  ['斎','齋','斉','齊'],['藤','籐'],['渡辺','渡邉','渡邊','渡部'],
+  ['広','廣'],['沢','澤'],['島','嶋','嶌'],['塚','塚','塚'],['桜','櫻'],
+  ['真','眞'],['国','國'],['竜','龍'],['鉄','鐵'],['恵','惠'],['条','條'],
+  ['浅','淺'],['関','關'],['辻','辻'],['猪','豬'],['亀','龜'],['黒','黑'],
+  ['尾','緒'],['松','枩'],['吉','𠮷'],
+];
+
+function expandVariants(q) {
+  const queries = [q];
+  for (const group of KANJI_VARIANTS) {
+    for (const ch of group) {
+      if (q.includes(ch)) {
+        for (const alt of group) {
+          if (alt !== ch) {
+            const variant = q.replace(ch, alt);
+            if (!queries.includes(variant)) queries.push(variant);
+          }
+        }
+      }
+    }
+  }
+  return queries;
+}
+
+function buildSearchOr(q) {
+  const kata = toKatakana(q);
+  const hira = toHiragana(q);
+  const nameVariants = expandVariants(q);
+  const terms = new Set();
+  // 名前（異体字展開）
+  nameVariants.forEach(v => terms.add(`name.ilike.*${encodeURIComponent(v)}*`));
+  // フリガナ（カタカナ・ひらがな両方）
+  terms.add(`name_kana.ilike.*${encodeURIComponent(kata)}*`);
+  if (hira !== kata) terms.add(`name_kana.ilike.*${encodeURIComponent(hira)}*`);
+  // 電話番号
+  terms.add(`phone.ilike.*${encodeURIComponent(q)}*`);
+  return `or=(${[...terms].join(',')})`;
+}
+
 // ── 画面切り替え ──
 let screenHistory = ['search'];
 
@@ -1288,7 +1338,17 @@ async function searchCustomers(q) {
   document.getElementById('main-menu').style.display = 'none';
   document.getElementById('daily-schedule').style.display = 'none';
   document.getElementById('product-alerts').style.display = 'none';
-  const results = await sbGet('customers', `or=(name.ilike.*${encodeURIComponent(q)}*,name_kana.ilike.*${encodeURIComponent(q)}*,phone.ilike.*${encodeURIComponent(q)}*)&order=name&limit=20`);
+  const results = await sbGet('customers', `${buildSearchOr(q)}&limit=30`);
+  // 最終来店日でソート（最近が上）
+  const records = await sbGet('karte_records', 'select=customer_id,date&order=date.desc');
+  const lastVisitMap = {};
+  records.forEach(r => { if (!lastVisitMap[r.customer_id]) lastVisitMap[r.customer_id] = r.date; });
+  results.forEach(c => {
+    const kv = lastVisitMap[c.id];
+    const hv = c.hp_last_visit;
+    c._sortDate = (kv && hv) ? (kv > hv ? kv : hv) : (kv || hv || '');
+  });
+  results.sort((a, b) => (b._sortDate || '').localeCompare(a._sortDate || ''));
   const box = document.getElementById('search-results');
   if (results.length === 0) {
     box.innerHTML = '<div class="empty-state">該当する顧客がありません</div>';
@@ -1299,7 +1359,7 @@ async function searchCustomers(q) {
       <div class="avatar">${esc(c.name).charAt(0)}</div>
       <div style="flex:1;">
         <div class="list-name">${esc(c.name)}</div>
-        <div class="list-sub">${c.phone ? formatPhone(c.phone) : ''}</div>
+        <div class="list-sub">${c._sortDate ? fmtDateFull(c._sortDate) : ''}${c.phone ? (c._sortDate ? ' / ' : '') + formatPhone(c.phone) : ''}</div>
       </div>
       <div class="list-action">カルテを見る ${CHEVRON}</div>
     </div>
@@ -2186,7 +2246,7 @@ function loadSegmentScreen() {
     const q = this.value.trim();
     if (q.length < 1) { filterPreset('all'); return; }
     segSearchTimeout = setTimeout(async () => {
-      const results = await sbGet('customers', `or=(name.ilike.*${encodeURIComponent(q)}*,name_kana.ilike.*${encodeURIComponent(q)}*,phone.ilike.*${encodeURIComponent(q)}*)&order=name&limit=50`);
+      const results = await sbGet('customers', `${buildSearchOr(q)}&limit=50`);
       const records = await sbGet('karte_records', 'select=customer_id,date&order=date.desc');
       const customerLastVisit = {};
       const customerVisitCount = {};
@@ -2305,10 +2365,15 @@ async function runCombinedFilter() {
     });
   }
 
-  segmentResults = filtered.map(c => ({
-    ...c, _lastVisit: customerLastVisit[c.id] || null,
-    _visitCount: customerVisitCount[c.id] || 0
-  }));
+  segmentResults = filtered.map(c => {
+    const kv = customerLastVisit[c.id];
+    const hv = c.hp_last_visit;
+    return {
+      ...c,
+      _lastVisit: (kv && hv) ? (kv > hv ? kv : hv) : (kv || hv || null),
+      _visitCount: customerVisitCount[c.id] || 0
+    };
+  });
   // 最終来店日の降順（最近来た人が上）
   segmentResults.sort((a, b) => (b._lastVisit || '').localeCompare(a._lastVisit || ''));
   renderSegmentResults();
