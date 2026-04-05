@@ -152,6 +152,33 @@ body {
   width: 18px; height: 18px; flex-shrink: 0;
 }
 
+/* ── タップ可能なカード型リスト ── */
+.list-item-card {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  margin: 8px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  gap: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s;
+}
+.list-item-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.list-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  white-space: nowrap;
+}
+
 /* ── ボタン ── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -983,9 +1010,13 @@ async function searchCustomers(q) {
     return;
   }
   box.innerHTML = results.map(c => `
-    <div class="list-item" onclick="openKarte('${c.id}')">
-      <div class="list-name">${esc(c.name)}</div>
-      <div class="list-sub">${c.phone || ''}</div>
+    <div class="list-item-card" onclick="openKarte('${c.id}')">
+      <div class="avatar">${esc(c.name).charAt(0)}</div>
+      <div style="flex:1;">
+        <div class="list-name">${esc(c.name)}</div>
+        <div class="list-sub">${c.phone ? formatPhone(c.phone) : ''}</div>
+      </div>
+      <div class="list-action">カルテを見る ${CHEVRON}</div>
     </div>
   `).join('');
 }
@@ -999,10 +1030,13 @@ async function loadSearchScreen() {
     list.innerHTML = '<div class="empty-state">施術記録がまだありません</div>';
   } else {
     list.innerHTML = records.map(r => `
-      <div class="list-item" onclick="openKarte('${r.customer_id}')">
-        <div class="list-date">${fmtDate(r.date)}</div>
-        <div class="list-name">${esc(r.customers?.name || '不明')}</div>
-        <div class="list-sub">${esc(r.menu || '')}</div>
+      <div class="list-item-card" onclick="openKarte('${r.customer_id}')">
+        <div class="avatar">${esc(r.customers?.name || '?').charAt(0)}</div>
+        <div style="flex:1;">
+          <div class="list-name">${esc(r.customers?.name || '不明')}</div>
+          <div class="list-sub">${fmtDate(r.date)}  ${esc(r.menu || '')}</div>
+        </div>
+        ${CHEVRON}
       </div>
     `).join('');
   }
@@ -1815,10 +1849,13 @@ function renderSegmentResults() {
     return;
   }
   box.innerHTML = segmentResults.map(c => `
-    <div class="list-item" onclick="openKarte('${c.id}')">
-      <div class="list-name">${esc(c.name)}</div>
-      <div class="list-sub">${c._lastVisit ? '最終:'+fmtDate(c._lastVisit) : '未来店'}${c._visitCount ? ' / '+c._visitCount+'回' : ''}</div>
-      <div class="list-date">${c.phone || ''}</div>
+    <div class="list-item-card" onclick="openKarte('${c.id}')">
+      <div class="avatar">${esc(c.name).charAt(0)}</div>
+      <div style="flex:1;">
+        <div class="list-name">${esc(c.name)}</div>
+        <div class="list-sub">${c._lastVisit ? '最終:'+fmtDate(c._lastVisit) : '未来店'}${c._visitCount ? ' / '+c._visitCount+'回' : ''}${c.phone ? ' / '+formatPhone(c.phone) : ''}</div>
+      </div>
+      ${CHEVRON}
     </div>
   `).join('');
 }
