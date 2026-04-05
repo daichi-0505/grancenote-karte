@@ -765,6 +765,66 @@ body {
   </div>
 </div>
 
+<!-- ===== 画面2.5: 施術カルテ詳細（閲覧） ===== -->
+<div id="screen-record-view" class="screen">
+  <div class="header">
+    <button class="header-back" onclick="showScreen('karte')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="header-title" id="rv-title">施術カルテ</div>
+  </div>
+
+  <div style="padding:0 16px 16px;">
+    <!-- 基本情報カード -->
+    <div class="card" style="border-left-color:var(--accent);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>
+          <div style="font-size:14px; color:var(--sub);" id="rv-date"></div>
+          <div style="font-size:20px; font-weight:700;" id="rv-menu"></div>
+        </div>
+        <div id="rv-duration" class="record-card-tag"></div>
+      </div>
+      <div style="display:flex; gap:16px; font-size:15px; color:var(--sub);">
+        <div id="rv-staff"></div>
+        <div id="rv-room"></div>
+      </div>
+    </div>
+
+    <!-- 肌の状態 -->
+    <div class="card" id="rv-skin-card" style="display:none; border-left-color:#D4C5A0;">
+      <div class="card-title">肌の状態</div>
+      <div id="rv-skin" style="font-size:15px; line-height:1.7; white-space:pre-wrap;"></div>
+    </div>
+
+    <!-- 会話メモ -->
+    <div class="card" id="rv-talk-card" style="display:none; border-left-color:#D4C5A0;">
+      <div class="card-title">会話メモ</div>
+      <div id="rv-talk" style="font-size:15px; line-height:1.7; white-space:pre-wrap;"></div>
+    </div>
+
+    <!-- スタッフ共有メモ -->
+    <div class="card" id="rv-memo-card" style="display:none; border-left-color:var(--danger);">
+      <div class="card-title" style="color:var(--danger);">スタッフ共有メモ</div>
+      <div id="rv-memo" style="font-size:15px; line-height:1.7; white-space:pre-wrap;"></div>
+    </div>
+
+    <!-- 写真 -->
+    <div class="card" id="rv-photos-card" style="display:none;">
+      <div class="card-title">施術写真</div>
+      <div id="rv-photos" class="photo-grid"></div>
+    </div>
+
+    <!-- 次回予約 -->
+    <div id="rv-next-card" class="card" style="display:none; border-left-color:var(--success);">
+      <div class="card-title">次回予約</div>
+      <div id="rv-next" style="font-size:16px; font-weight:600;"></div>
+    </div>
+
+    <!-- 編集ボタン -->
+    <div style="margin-top:20px; display:flex; gap:12px;">
+      <button class="btn btn-primary btn-block" id="rv-edit-btn" onclick="">編集する</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 画面3: 施術記録入力 ===== -->
 <div id="screen-record" class="screen">
   <div class="header">
@@ -1382,7 +1442,7 @@ async function loadKarteScreen() {
       if (r.talk_memo) memoHtml += `<div><span style="font-weight:600;color:var(--accent-dark);">会話:</span> ${esc(r.talk_memo)}</div>`;
       if (r.staff_memo) memoHtml += `<div><span style="font-weight:600;color:var(--danger);">共有:</span> ${esc(r.staff_memo)}</div>`;
 
-      return `<div class="record-card" onclick="editRecord('${r.id}')">
+      return `<div class="record-card" onclick="viewRecord('${r.id}')">
         <div class="record-card-header">
           <div class="record-card-date">${fmtDateFull(r.date)}</div>
           <div class="record-card-menu">${esc(r.menu || '(未入力)')}</div>
@@ -1413,6 +1473,61 @@ function switchTab(el) {
 // ==================================
 // 画面3: 施術記録入力
 // ==================================
+// 施術カルテ詳細（閲覧）
+async function viewRecord(id) {
+  const records = await sbGet('karte_records', `id=eq.${id}`);
+  if (records.length === 0) return;
+  const r = records[0];
+
+  document.getElementById('rv-title').textContent = currentCustomer?.name || '施術カルテ';
+  document.getElementById('rv-date').textContent = fmtDateFull(r.date);
+  document.getElementById('rv-menu').textContent = r.menu || '(メニュー未入力)';
+  document.getElementById('rv-duration').textContent = r.duration_min ? r.duration_min + '分' : '';
+  document.getElementById('rv-duration').style.display = r.duration_min ? '' : 'none';
+  document.getElementById('rv-staff').textContent = r.staff_id ? '担当: ' + staffName(r.staff_id) : '';
+  document.getElementById('rv-room').textContent = r.room_id ? roomName(r.room_id) : '';
+
+  // 肌の状態
+  const skinCard = document.getElementById('rv-skin-card');
+  if (r.skin_condition) { skinCard.style.display = ''; document.getElementById('rv-skin').textContent = r.skin_condition; }
+  else skinCard.style.display = 'none';
+
+  // 会話メモ
+  const talkCard = document.getElementById('rv-talk-card');
+  if (r.talk_memo) { talkCard.style.display = ''; document.getElementById('rv-talk').textContent = r.talk_memo; }
+  else talkCard.style.display = 'none';
+
+  // スタッフ共有メモ
+  const memoCard = document.getElementById('rv-memo-card');
+  if (r.staff_memo) { memoCard.style.display = ''; document.getElementById('rv-memo').textContent = r.staff_memo; }
+  else memoCard.style.display = 'none';
+
+  // 次回予約
+  const nextCard = document.getElementById('rv-next-card');
+  if (r.next_visit_date) { nextCard.style.display = ''; document.getElementById('rv-next').textContent = fmtDateFull(r.next_visit_date); }
+  else nextCard.style.display = 'none';
+
+  // 写真
+  const photos = await sbGet('karte_photos', `record_id=eq.${id}&order=taken_at`);
+  const photosCard = document.getElementById('rv-photos-card');
+  if (photos.length > 0) {
+    photosCard.style.display = '';
+    document.getElementById('rv-photos').innerHTML = photos.map(p =>
+      `<div class="photo-thumb" onclick="viewPhoto('${esc(p.photo_url)}','${p.photo_type} ${p.angle||""}','${fmtDateFull(r.date)}')">
+        <img src="${esc(p.photo_url)}" loading="lazy">
+        <div class="photo-thumb-label">${p.photo_type}${p.angle ? ' '+p.angle : ''}</div>
+      </div>`
+    ).join('');
+  } else {
+    photosCard.style.display = 'none';
+  }
+
+  // 編集ボタン
+  document.getElementById('rv-edit-btn').onclick = () => { showRecordForm(id); };
+
+  showScreen('record-view');
+}
+
 function showRecordForm(recordId) {
   editingRecordId = recordId || null;
   document.getElementById('record-customer-name').textContent = currentCustomer?.name || '';
