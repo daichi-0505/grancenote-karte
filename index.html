@@ -2279,6 +2279,22 @@ async function runCombinedFilter() {
     return true;
   });
 
+  // フィルタ未指定時は最終来店6ヶ月以内のみ（デフォルト）
+  const hasAnyFilter = activePresets.size > 0 ||
+    document.getElementById('seg-birthday-month')?.value ||
+    document.getElementById('seg-last-visit')?.value ||
+    document.getElementById('seg-visit-count')?.value;
+
+  if (!hasAnyFilter) {
+    const sixMonthsAgo = new Date(today);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const ts6 = sixMonthsAgo.toISOString().split('T')[0];
+    filtered = filtered.filter(c => {
+      const lv = customerLastVisit[c.id];
+      return lv && lv >= ts6;
+    });
+  }
+
   segmentResults = filtered.map(c => ({
     ...c, _lastVisit: customerLastVisit[c.id] || null,
     _visitCount: customerVisitCount[c.id] || 0
@@ -2287,7 +2303,14 @@ async function runCombinedFilter() {
 }
 
 function renderSegmentResults() {
-  document.getElementById('seg-count').textContent = `結果: ${segmentResults.length}名`;
+  const hasAny = activePresets.size > 0 ||
+    document.getElementById('seg-birthday-month')?.value ||
+    document.getElementById('seg-last-visit')?.value ||
+    document.getElementById('seg-visit-count')?.value ||
+    document.getElementById('seg-search-input')?.value?.trim();
+  document.getElementById('seg-count').textContent = hasAny
+    ? `結果: ${segmentResults.length}名`
+    : `最近6ヶ月以内のお客様: ${segmentResults.length}名`;
   const box = document.getElementById('seg-results');
   if (segmentResults.length === 0) {
     box.innerHTML = '<div class="empty-state">該当する顧客がいません</div>';
