@@ -1471,8 +1471,12 @@ async function loadKarteScreen() {
   if (totalVisits > 0) {
     infoParts.push(`来店${totalVisits}回`);
   }
-  if (allRecords.length > 0) {
-    infoParts.push(`最終 ${fmtDate(allRecords[0].date)}`);
+  // 最終来店日: カルテ記録 vs HP移行の新しい方
+  const karteLastDate = allRecords.length > 0 ? allRecords[0].date : null;
+  const hpLastDate = c.hp_last_visit || null;
+  const lastDate = karteLastDate && hpLastDate ? (karteLastDate > hpLastDate ? karteLastDate : hpLastDate) : (karteLastDate || hpLastDate);
+  if (lastDate) {
+    infoParts.push(`最終 ${fmtDateFull(lastDate)}`);
   }
   document.getElementById('karte-summary-info').textContent = infoParts.join(' / ');
 
@@ -2191,7 +2195,8 @@ function loadSegmentScreen() {
         customerVisitCount[r.customer_id] = (customerVisitCount[r.customer_id] || 0) + 1;
       });
       segmentResults = results.map(c => ({
-        ...c, _lastVisit: customerLastVisit[c.id] || null,
+        ...c,
+        _lastVisit: (customerLastVisit[c.id] && c.hp_last_visit) ? (customerLastVisit[c.id] > c.hp_last_visit ? customerLastVisit[c.id] : c.hp_last_visit) : (customerLastVisit[c.id] || c.hp_last_visit || null),
         _visitCount: customerVisitCount[c.id] || 0
       }));
       renderSegmentResults();
@@ -2295,7 +2300,7 @@ async function runCombinedFilter() {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     const ts6 = sixMonthsAgo.toISOString().split('T')[0];
     filtered = filtered.filter(c => {
-      const lv = customerLastVisit[c.id];
+      const lv = customerLastVisit[c.id] || c.hp_last_visit;
       return lv && lv >= ts6;
     });
   }
