@@ -988,31 +988,47 @@ body {
   </div>
 
   <div style="margin:12px 16px;">
-    <div style="font-size:13px;font-weight:500;color:var(--label);margin-bottom:8px;">プリセット</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
-      <button class="btn btn-sm btn-outline" onclick="filterPreset('birthday')">今月誕生日</button>
-      <button class="btn btn-sm btn-outline" onclick="filterPreset('dormant')">3ヶ月未来店</button>
-      <button class="btn btn-sm btn-outline" onclick="filterPreset('course_low')">残り1回以下</button>
-      <button class="btn btn-sm btn-outline" onclick="filterPreset('all')">全員表示</button>
-    </div>
+    <!-- 絞り込み（開閉式） -->
+    <button class="expand-btn" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'" style="margin-bottom:8px;">絞り込み条件</button>
+    <div id="seg-filters" style="display:none;">
+      <div style="font-size:14px;font-weight:600;color:var(--label);margin-bottom:8px;">よく使う条件</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+        <button class="staff-chip" data-preset="birthday" onclick="togglePreset(this)">今月が誕生日</button>
+        <button class="staff-chip" data-preset="dormant" onclick="togglePreset(this)">3ヶ月以上来ていない</button>
+        <button class="staff-chip" data-preset="course_low" onclick="togglePreset(this)">コース残り1回以下</button>
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">カスタム条件</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <select id="seg-field" class="form-select" style="flex:1;min-width:120px;">
-          <option value="birthday_month">誕生月</option>
-          <option value="last_visit">最終来店</option>
-          <option value="course_remaining">コース残数</option>
-          <option value="visit_count">来店回数</option>
-          <option value="staff">担当スタッフ</option>
-        </select>
-        <select id="seg-op" class="form-select" style="width:60px;">
-          <option value="eq">=</option>
-          <option value="gte">>=</option>
-          <option value="lte"><=</option>
-        </select>
-        <input id="seg-value" type="text" class="form-input" style="flex:1;min-width:80px;" placeholder="値">
-        <button class="btn btn-sm btn-primary" onclick="runSegmentFilter()">検索</button>
+      <div style="font-size:14px;font-weight:600;color:var(--label);margin-bottom:8px;">詳細条件</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:14px;min-width:80px;">誕生月</span>
+          <select id="seg-birthday-month" class="form-select" style="flex:1;" onchange="runCombinedFilter()">
+            <option value="">指定なし</option>
+            <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+            <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+            <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+            <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:14px;min-width:80px;">最終来店</span>
+          <select id="seg-last-visit" class="form-select" style="flex:1;" onchange="runCombinedFilter()">
+            <option value="">指定なし</option>
+            <option value="1">1ヶ月以上前</option>
+            <option value="2">2ヶ月以上前</option>
+            <option value="3">3ヶ月以上前</option>
+            <option value="6">半年以上前</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:14px;min-width:80px;">来店回数</span>
+          <select id="seg-visit-op" class="form-select" style="width:60px;" onchange="runCombinedFilter()">
+            <option value="gte">以上</option>
+            <option value="lte">以下</option>
+          </select>
+          <input id="seg-visit-count" type="number" class="form-input" style="width:70px;" placeholder="回" onchange="runCombinedFilter()">
+          <span style="font-size:14px;">回</span>
+        </div>
       </div>
     </div>
   </div>
@@ -2178,27 +2194,32 @@ function loadSegmentScreen() {
   };
 }
 
+let activePresets = new Set();
+
+function togglePreset(btn) {
+  const preset = btn.dataset.preset;
+  if (activePresets.has(preset)) {
+    activePresets.delete(preset);
+    btn.classList.remove('active');
+  } else {
+    activePresets.add(preset);
+    btn.classList.add('active');
+  }
+  runCombinedFilter();
+}
+
 async function filterPreset(type) {
+  // 初期表示用（全員）
+  activePresets.clear();
+  document.querySelectorAll('[data-preset]').forEach(b => b.classList.remove('active'));
+  await runCombinedFilter();
+}
+
+async function runCombinedFilter() {
   const all = await sbGet('customers', 'order=name&limit=500');
   const today = new Date();
   const thisMonth = today.getMonth() + 1;
 
-  if (type === 'all') {
-    segmentResults = all;
-    renderSegmentResults();
-    return;
-  }
-
-  if (type === 'birthday') {
-    segmentResults = all.filter(c => {
-      if (!c.birthday) return false;
-      return new Date(c.birthday).getMonth() + 1 === thisMonth;
-    });
-    renderSegmentResults();
-    return;
-  }
-
-  // 最終来店日・来店回数はkarte_recordsからJOINして計算
   const records = await sbGet('karte_records', 'select=customer_id,date&order=date.desc');
   const customerLastVisit = {};
   const customerVisitCount = {};
@@ -2207,96 +2228,56 @@ async function filterPreset(type) {
     customerVisitCount[r.customer_id] = (customerVisitCount[r.customer_id] || 0) + 1;
   });
 
-  if (type === 'dormant') {
-    const threeMonthsAgo = new Date(today);
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-    const threshold = threeMonthsAgo.toISOString().split('T')[0];
-    segmentResults = all.filter(c => {
-      const lastVisit = customerLastVisit[c.id];
-      return !lastVisit || lastVisit < threshold;
-    });
-    // 最終来店日の情報を付与
-    segmentResults = segmentResults.map(c => ({
-      ...c, _lastVisit: customerLastVisit[c.id] || null,
-      _visitCount: customerVisitCount[c.id] || 0
-    }));
-    renderSegmentResults();
-    return;
-  }
-
-  if (type === 'course_low') {
-    const courses = await sbGet('karte_courses', 'status=eq.active');
-    const lowCourseCustomers = new Set();
+  let courses = null;
+  let lowCourseCustomers = null;
+  if (activePresets.has('course_low')) {
+    courses = await sbGet('karte_courses', 'status=eq.active');
+    lowCourseCustomers = new Set();
     courses.forEach(co => {
       if (co.total_count - co.used_count <= 1) lowCourseCustomers.add(co.customer_id);
     });
-    segmentResults = all.filter(c => lowCourseCustomers.has(c.id));
-    segmentResults = segmentResults.map(c => ({
-      ...c, _lastVisit: customerLastVisit[c.id] || null,
-      _visitCount: customerVisitCount[c.id] || 0
-    }));
-    renderSegmentResults();
-    return;
   }
-}
 
-async function runSegmentFilter() {
-  const field = document.getElementById('seg-field').value;
-  const op = document.getElementById('seg-op').value;
-  const val = document.getElementById('seg-value').value.trim();
-  if (!val) { alert('値を入力してください'); return; }
+  let filtered = all.filter(c => {
+    // プリセット（AND結合: 全て満たす）
+    if (activePresets.has('birthday')) {
+      if (!c.birthday || new Date(c.birthday).getMonth() + 1 !== thisMonth) return false;
+    }
+    if (activePresets.has('dormant')) {
+      const ago = new Date(today); ago.setMonth(ago.getMonth() - 3);
+      const ts = ago.toISOString().split('T')[0];
+      const lv = customerLastVisit[c.id];
+      if (lv && lv >= ts) return false;
+    }
+    if (activePresets.has('course_low')) {
+      if (!lowCourseCustomers.has(c.id)) return false;
+    }
 
-  const all = await sbGet('customers', 'order=name&limit=500');
-  const records = await sbGet('karte_records', 'select=customer_id,date&order=date.desc');
-  const customerLastVisit = {};
-  const customerVisitCount = {};
-  records.forEach(r => {
-    if (!customerLastVisit[r.customer_id]) customerLastVisit[r.customer_id] = r.date;
-    customerVisitCount[r.customer_id] = (customerVisitCount[r.customer_id] || 0) + 1;
+    // 詳細条件
+    const bMonth = document.getElementById('seg-birthday-month')?.value;
+    if (bMonth) {
+      if (!c.birthday || new Date(c.birthday).getMonth() + 1 !== parseInt(bMonth)) return false;
+    }
+
+    const lastVisit = document.getElementById('seg-last-visit')?.value;
+    if (lastVisit) {
+      const ago = new Date(today); ago.setMonth(ago.getMonth() - parseInt(lastVisit));
+      const ts = ago.toISOString().split('T')[0];
+      const lv = customerLastVisit[c.id];
+      if (lv && lv >= ts) return false;
+    }
+
+    const visitCount = document.getElementById('seg-visit-count')?.value;
+    if (visitCount) {
+      const n = parseInt(visitCount);
+      const op = document.getElementById('seg-visit-op')?.value || 'gte';
+      const count = customerVisitCount[c.id] || 0;
+      if (op === 'gte' && count < n) return false;
+      if (op === 'lte' && count > n) return false;
+    }
+
+    return true;
   });
-
-  let filtered = all;
-
-  if (field === 'birthday_month') {
-    const month = parseInt(val);
-    filtered = all.filter(c => c.birthday && new Date(c.birthday).getMonth() + 1 === month);
-  } else if (field === 'last_visit') {
-    const months = parseInt(val);
-    const threshold = new Date();
-    threshold.setMonth(threshold.getMonth() - months);
-    const ts = threshold.toISOString().split('T')[0];
-    if (op === 'gte') {
-      filtered = all.filter(c => !customerLastVisit[c.id] || customerLastVisit[c.id] < ts);
-    } else {
-      filtered = all.filter(c => customerLastVisit[c.id] && customerLastVisit[c.id] >= ts);
-    }
-  } else if (field === 'visit_count') {
-    const count = parseInt(val);
-    if (op === 'gte') {
-      filtered = all.filter(c => (customerVisitCount[c.id] || 0) >= count);
-    } else if (op === 'lte') {
-      filtered = all.filter(c => (customerVisitCount[c.id] || 0) <= count);
-    } else {
-      filtered = all.filter(c => (customerVisitCount[c.id] || 0) === count);
-    }
-  } else if (field === 'course_remaining') {
-    const courses = await sbGet('karte_courses', 'status=eq.active');
-    const customerRemaining = {};
-    courses.forEach(co => {
-      const rem = co.total_count - co.used_count;
-      customerRemaining[co.customer_id] = Math.min(customerRemaining[co.customer_id] ?? Infinity, rem);
-    });
-    const n = parseInt(val);
-    if (op === 'lte') {
-      filtered = all.filter(c => customerRemaining[c.id] !== undefined && customerRemaining[c.id] <= n);
-    } else if (op === 'gte') {
-      filtered = all.filter(c => customerRemaining[c.id] !== undefined && customerRemaining[c.id] >= n);
-    }
-  } else if (field === 'staff') {
-    const staffId = val;
-    const custIds = new Set(records.filter(r => r.staff_id === staffId).map(r => r.customer_id));
-    filtered = all.filter(c => custIds.has(c.id));
-  }
 
   segmentResults = filtered.map(c => ({
     ...c, _lastVisit: customerLastVisit[c.id] || null,
