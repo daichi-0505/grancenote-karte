@@ -931,7 +931,8 @@ body {
     </div>
     <div class="form-group">
       <label class="form-label">誕生日</label>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <select id="new-birthday-year" class="form-input" style="flex:1.2;"><option value="">年（任意）</option></select>
         <select id="new-birthday-month" class="form-input" style="flex:1;"><option value="">月</option></select>
         <select id="new-birthday-day" class="form-input" style="flex:1;"><option value="">日（任意）</option></select>
       </div>
@@ -965,7 +966,8 @@ body {
     </div>
     <div class="form-group">
       <label class="form-label">誕生日</label>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <select id="edit-birthday-year" class="form-input" style="flex:1.2;"><option value="">年（任意）</option></select>
         <select id="edit-birthday-month" class="form-input" style="flex:1;"><option value="">月</option></select>
         <select id="edit-birthday-day" class="form-input" style="flex:1;"><option value="">日（任意）</option></select>
       </div>
@@ -1312,11 +1314,31 @@ function fmtDateFull(d) {
 function fmtBirthday(d) {
   if (!d) return '';
   const dt = new Date(d);
+  const yr = dt.getFullYear();
   const m = dt.getMonth() + 1;
   const day = dt.getDate();
-  // 年=2000 & 日=1 → 月のみ登録
-  if (dt.getFullYear() === 2000 && day === 1) return `${m}月生まれ`;
-  return `${m}月${day}日`;
+  const yearKnown = yr !== 2000;
+  const dayKnown = !(yr === 2000 && day === 1);
+  let s = '';
+  if (yearKnown) s += `${yr}年`;
+  s += `${m}月`;
+  if (dayKnown) s += `${day}日`;
+  else if (!yearKnown) s += '生まれ';
+  if (yearKnown) s += ` (${calcAge(dt)}歳)`;
+  return s;
+}
+function calcAge(birthDate) {
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+  return age;
+}
+function getAge(birthdayStr) {
+  if (!birthdayStr) return null;
+  const dt = new Date(birthdayStr);
+  if (dt.getFullYear() === 2000) return null; // 年不明
+  return calcAge(dt);
 }
 function todayStr() {
   const d = new Date();
@@ -1528,7 +1550,8 @@ async function loadKarteScreen() {
   const c = currentCustomer;
 
   // ヘッダー
-  document.getElementById('karte-name').textContent = c.name;
+  const age = getAge(c.birthday);
+  document.getElementById('karte-name').innerHTML = esc(c.name) + (age !== null ? ` <span style="font-size:16px;color:var(--sub);font-weight:400;">(${age}歳)</span>` : '');
 
   // サマリーカード
   document.getElementById('karte-avatar').textContent = c.name.charAt(0);
@@ -2439,8 +2462,13 @@ function exportCSV() {
 // 誕生日セレクト ヘルパー
 // ==================================
 function initBirthdaySelects(prefix) {
+  const ySel = document.getElementById(prefix + '-birthday-year');
   const mSel = document.getElementById(prefix + '-birthday-month');
   const dSel = document.getElementById(prefix + '-birthday-day');
+  if (ySel.options.length <= 1) {
+    const thisYear = new Date().getFullYear();
+    for (let y = thisYear; y >= 1930; y--) ySel.add(new Option(y + '年', y));
+  }
   if (mSel.options.length <= 1) {
     for (let m = 1; m <= 12; m++) mSel.add(new Option(m + '月', m));
   }
@@ -2451,21 +2479,26 @@ function initBirthdaySelects(prefix) {
 
 function setBirthdaySelects(prefix, val) {
   initBirthdaySelects(prefix);
+  const ySel = document.getElementById(prefix + '-birthday-year');
   const mSel = document.getElementById(prefix + '-birthday-month');
   const dSel = document.getElementById(prefix + '-birthday-day');
-  if (!val) { mSel.value = ''; dSel.value = ''; return; }
+  if (!val) { ySel.value = ''; mSel.value = ''; dSel.value = ''; return; }
   const dt = new Date(val);
+  const yr = dt.getFullYear();
+  // 年=2000 → 年不明（月のみ登録時のダミー）
+  ySel.value = (yr === 2000) ? '' : yr;
   mSel.value = dt.getMonth() + 1;
-  // 日が1日 = 月のみ登録の可能性 → 日は空のまま
+  // 年=2000 & 日=1 → 月のみ登録
   const day = dt.getDate();
-  dSel.value = (day === 1 && dt.getFullYear() === 2000) ? '' : day;
+  dSel.value = (day === 1 && yr === 2000) ? '' : day;
 }
 
 function getBirthdayFromSelects(prefix) {
   const m = document.getElementById(prefix + '-birthday-month').value;
   if (!m) return null;
+  const y = document.getElementById(prefix + '-birthday-year').value || '2000';
   const d = document.getElementById(prefix + '-birthday-day').value || '1';
-  return `2000-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 
 // ==================================
