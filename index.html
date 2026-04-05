@@ -2307,7 +2307,7 @@ async function saveNewCustomer() {
   if (result) {
     // 予約にcustomer_idを紐付け
     if (pendingReservationId) {
-      await sbPatch('yoyaku_reservations', `id=eq.${pendingReservationId}`, { customer_id: result.id });
+      await sbPatch('yoyaku_reservations', `id=eq.${pendingReservationId}`, { customer_id: result.id, name: result.name });
       pendingReservationId = null;
     }
     closeModal('modal-new-customer');
@@ -2344,6 +2344,8 @@ async function saveEditCustomer() {
   };
   const result = await sbPatch('customers', `id=eq.${currentCustomer.id}`, data);
   if (result) {
+    // 紐付いてる予約の名前も同期
+    await sbPatch('yoyaku_reservations', `customer_id=eq.${currentCustomer.id}`, { name: name });
     currentCustomer = result;
     closeModal('modal-edit-customer');
     loadKarteScreen();
