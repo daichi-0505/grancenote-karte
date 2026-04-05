@@ -69,11 +69,15 @@ body {
   font-weight: 500;
 }
 .header-back {
-  background: none; border: none; font-size: 20px; cursor: pointer;
-  color: var(--accent-dark); padding: 4px;
+  background: none; border: none; cursor: pointer;
+  padding: 8px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s;
 }
-.header-title { font-size: 22px; font-weight: 700; flex: 1; }
-.header-sub { font-size: 12px; color: var(--sub); }
+.header-back:active { background: var(--accent-20); }
+.header-title { font-size: 24px; font-weight: 700; flex: 1; }
+.header-sub { font-size: 14px; color: var(--sub); }
 
 /* ── カード ── */
 .card {
@@ -94,8 +98,8 @@ body {
   padding: 18px 20px;
 }
 .card-title {
-  font-size: 16px; font-weight: 700; color: var(--label);
-  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  font-size: 17px; font-weight: 700; color: var(--label);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
 }
 
 /* ── 検索バー ── */
@@ -108,7 +112,7 @@ body {
   padding: 12px 16px 12px 42px;
   border: 1px solid var(--border-input);
   border-radius: 99px;
-  font-size: 16px;
+  font-size: 17px;
   font-family: inherit;
   background: var(--surface);
   outline: none;
@@ -141,9 +145,9 @@ body {
 }
 .list-item:last-child { border-bottom: none; }
 .list-item:active { background: #FAF8F5; }
-.list-name { font-size: 15px; font-weight: 600; flex: 1; }
-.list-sub { font-size: 12px; color: var(--sub); }
-.list-date { font-size: 12px; color: var(--muted); min-width: 50px; text-align: right; }
+.list-name { font-size: 17px; font-weight: 600; flex: 1; }
+.list-sub { font-size: 14px; color: var(--sub); }
+.list-date { font-size: 14px; color: var(--muted); min-width: 50px; text-align: right; }
 .list-chevron {
   width: 18px; height: 18px; flex-shrink: 0;
 }
@@ -151,15 +155,15 @@ body {
 /* ── ボタン ── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 10px 24px;
+  padding: 12px 28px;
   border: none; border-radius: 99px;
-  font-size: 15px; font-family: inherit; font-weight: 500;
+  font-size: 16px; font-family: inherit; font-weight: 600;
   cursor: pointer; transition: opacity 0.2s;
 }
 .btn:active { opacity: 0.7; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent-dark); }
-.btn-sm { padding: 6px 16px; font-size: 13px; }
+.btn-sm { padding: 8px 18px; font-size: 14px; }
 .btn-block { width: 100%; }
 .btn-danger { background: var(--danger); color: #fff; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; color: #fff; }
@@ -170,8 +174,8 @@ body {
 /* ── フォーム ── */
 .form-group { margin-bottom: 16px; }
 .form-label {
-  display: block; font-size: 13px; font-weight: 500;
-  color: var(--label); margin-bottom: 4px;
+  display: block; font-size: 15px; font-weight: 600;
+  color: var(--label); margin-bottom: 6px;
 }
 .form-label .required {
   background: var(--accent); color: #fff;
@@ -183,7 +187,7 @@ body {
   padding: 10px 14px;
   border: 1px solid var(--border-input);
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 16px;
   font-family: inherit;
   background: var(--surface);
   outline: none;
@@ -203,8 +207,8 @@ body {
   gap: 0;
 }
 .tab {
-  flex: 1; padding: 10px 8px; text-align: center;
-  font-size: 13px; font-weight: 600; color: var(--sub);
+  flex: 1; padding: 12px 8px; text-align: center;
+  font-size: 15px; font-weight: 600; color: var(--sub);
   cursor: pointer; border-bottom: 2px solid transparent;
   margin-bottom: -2px; transition: all 0.2s;
 }
@@ -226,10 +230,10 @@ body {
 /* ── コース残数バッジ ── */
 .course-badge {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   background: var(--accent-20);
   border-radius: 99px;
-  font-size: 13px;
+  font-size: 14px; font-weight: 500;
   margin: 4px 4px 4px 0;
 }
 .course-badge.low { background: rgba(196,112,112,0.12); color: var(--danger); }
@@ -237,7 +241,7 @@ body {
 /* ── 空状態 ── */
 .empty-state {
   text-align: center; padding: 40px 20px;
-  color: var(--muted); font-size: 14px;
+  color: var(--sub); font-size: 15px;
 }
 
 /* ── ローディング ── */
@@ -276,16 +280,16 @@ body {
   display: grid;
   grid-template-columns: 70px 1fr 50px 60px;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-list);
+  font-size: 15px;
   cursor: pointer;
 }
 .record-row:active { background: #FAF8F5; }
-.record-date { color: var(--sub); font-size: 13px; }
-.record-menu { font-weight: 500; }
-.record-duration { color: var(--sub); font-size: 13px; text-align: right; }
-.record-staff { color: var(--sub); font-size: 12px; text-align: right; }
+.record-date { color: var(--sub); font-size: 14px; }
+.record-menu { font-weight: 600; font-size: 16px; }
+.record-duration { color: var(--sub); font-size: 14px; text-align: right; }
+.record-staff { color: var(--sub); font-size: 13px; text-align: right; }
 
 /* ── 新規顧客ボタン ── */
 .fab {
@@ -324,7 +328,7 @@ body {
   margin-bottom: 8px;
 }
 .menu-label {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text);
   margin-bottom: 4px;
@@ -507,7 +511,7 @@ body {
 <!-- ===== 画面2: 顧客カルテ（メイン） ===== -->
 <div id="screen-karte" class="screen">
   <div class="header">
-    <button class="header-back" onclick="showScreen('search')">&larr;</button>
+    <button class="header-back" onclick="showScreen('search')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div>
       <div class="header-title" id="karte-name"></div>
       <div class="header-sub" id="karte-info"></div>
@@ -569,7 +573,7 @@ body {
 <!-- ===== 画面3: 施術記録入力 ===== -->
 <div id="screen-record" class="screen">
   <div class="header">
-    <button class="header-back" onclick="showScreen('karte')">&larr;</button>
+    <button class="header-back" onclick="showScreen('karte')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="header-title">施術記録</div>
     <div class="header-sub" id="record-customer-name"></div>
   </div>
@@ -718,7 +722,7 @@ body {
 <!-- ===== 画面4: 顧客セグメント・リスト ===== -->
 <div id="screen-segment" class="screen">
   <div class="header">
-    <button class="header-back" onclick="showScreen('search')">&larr;</button>
+    <button class="header-back" onclick="showScreen('search')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="header-title">顧客リスト</div>
     <button class="btn btn-sm btn-outline" onclick="exportCSV()">CSV</button>
   </div>
