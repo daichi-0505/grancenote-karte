@@ -599,8 +599,8 @@ body {
   transition: transform 0.15s ease;
 }
 .schedule-card:active { transform: scale(0.98); }
-.schedule-card.no-karte { opacity: 0.6; cursor: default; }
-.schedule-card.no-karte:active { transform: none; }
+.schedule-card.no-karte { opacity: 0.8; }
+.schedule-unreg { color: var(--accent); }
 .schedule-time {
   font-size: 14px; font-weight: 700;
   color: var(--accent-dark);
@@ -1266,13 +1266,13 @@ function renderScheduleList() {
   list.innerHTML = visible.map(r => {
     const hasKarte = !!r.customer_id;
     const sName = staffName(r.staff_id);
-    return `<div class="schedule-card ${hasKarte ? '' : 'no-karte'}" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : ''}">
+    return `<div class="schedule-card ${hasKarte ? '' : 'no-karte'}" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : `quickRegister('${esc(r.name).replace(/'/g,"\\'")}','${r.id}')`}">
       <div class="schedule-time">${r.start_time}~</div>
       <div class="schedule-info">
         <div class="schedule-name">${esc(r.name)}</div>
         <div class="schedule-meta">${esc(r.menu || '')}${sName ? `<span class="schedule-staff">${sName}</span>` : ''}</div>
       </div>
-      ${hasKarte ? CHEVRON : '<span class="schedule-unreg">未登録</span>'}
+      ${hasKarte ? CHEVRON : '<span class="schedule-unreg">+ 登録</span>'}
     </div>`;
   }).join('');
 
@@ -2154,8 +2154,22 @@ function exportCSV() {
 // ==================================
 // 新規顧客登録
 // ==================================
+let pendingReservationId = null; // 予約紐付け用
+
 function showNewCustomerModal() {
+  pendingReservationId = null;
   document.getElementById('new-name').value = '';
+  document.getElementById('new-kana').value = '';
+  document.getElementById('new-phone').value = '';
+  document.getElementById('new-birthday').value = '';
+  document.getElementById('new-memo').value = '';
+  document.getElementById('modal-new-customer').classList.add('show');
+}
+
+// 予約からの簡易登録（名前を自動入力）
+function quickRegister(name, reservationId) {
+  pendingReservationId = reservationId;
+  document.getElementById('new-name').value = name;
   document.getElementById('new-kana').value = '';
   document.getElementById('new-phone').value = '';
   document.getElementById('new-birthday').value = '';
@@ -2176,6 +2190,11 @@ async function saveNewCustomer() {
   };
   const result = await sbPost('customers', data);
   if (result) {
+    // 予約にcustomer_idを紐付け
+    if (pendingReservationId) {
+      await sbPatch('yoyaku_reservations', `id=eq.${pendingReservationId}`, { customer_id: result.id });
+      pendingReservationId = null;
+    }
     closeModal('modal-new-customer');
     currentCustomer = result;
     showScreen('karte');
