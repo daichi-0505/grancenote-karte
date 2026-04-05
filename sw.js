@@ -1,6 +1,6 @@
-// カルテ Service Worker v2 — フリガナ検索対応
+// カルテ Service Worker v3 — UIデザインガイド適用
 // キャッシュなし（常にネットワーク取得）
-const CACHE_NAME = 'karte-v2';
+const CACHE_NAME = 'karte-v3';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {

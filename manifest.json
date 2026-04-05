@@ -5,11 +5,11 @@
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#F8F7F5",
-  "theme_color": "#C4707E",
+  "background_color": "#FAFAF7",
+  "theme_color": "#C4A97D",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23C4707E'/><text x='96' y='130' font-size='120' text-anchor='middle' fill='white'>K</text></svg>",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23C4A97D'/><text x='96' y='130' font-size='120' text-anchor='middle' fill='white'>K</text></svg>",
       "sizes": "192x192",
       "type": "image/svg+xml"
     }
