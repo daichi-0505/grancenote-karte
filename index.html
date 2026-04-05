@@ -274,7 +274,39 @@ body {
   cursor: pointer;
   z-index: 50;
 }
-.fab:active { opacity: 0.8; }
+/* ── メニューカード（トップ画面） ── */
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.menu-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 20px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: 1px solid var(--border);
+}
+.menu-card:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.menu-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+.menu-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.menu-sub {
+  font-size: 11px;
+  color: var(--muted);
+}
 
 /* ── 写真グリッド ── */
 .photo-timeline-date {
@@ -395,11 +427,10 @@ body {
 </head>
 <body>
 
-<!-- ===== 画面1: 顧客検索（トップ） ===== -->
+<!-- ===== 画面1: トップ（ダッシュボード） ===== -->
 <div id="screen-search" class="screen active">
   <div class="header">
     <div class="header-title">顧客カルテ</div>
-    <button class="btn btn-sm btn-outline" onclick="showScreen('segment')">顧客リスト</button>
   </div>
 
   <div class="search-bar">
@@ -407,6 +438,21 @@ body {
   </div>
 
   <div id="search-results" style="margin:0 16px;"></div>
+
+  <div id="main-menu" style="margin:8px 16px;">
+    <div class="menu-grid">
+      <div class="menu-card" onclick="showScreen('segment')">
+        <div class="menu-icon">&#128203;</div>
+        <div class="menu-label">顧客カルテ一覧</div>
+        <div class="menu-sub">全顧客の検索・フィルタ</div>
+      </div>
+      <div class="menu-card" onclick="showNewCustomerModal()">
+        <div class="menu-icon">&#128100;</div>
+        <div class="menu-label">新規顧客登録</div>
+        <div class="menu-sub">お客様を新しく追加</div>
+      </div>
+    </div>
+  </div>
 
   <div id="recent-records">
     <div class="card">
@@ -421,8 +467,6 @@ body {
       <div id="alert-list"></div>
     </div>
   </div>
-
-  <button class="fab" onclick="showNewCustomerModal()">+</button>
 </div>
 
 <!-- ===== 画面2: 顧��カルテ（メイン） ===== -->
