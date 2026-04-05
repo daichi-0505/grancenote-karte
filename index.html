@@ -2299,6 +2299,8 @@ async function runCombinedFilter() {
     ...c, _lastVisit: customerLastVisit[c.id] || null,
     _visitCount: customerVisitCount[c.id] || 0
   }));
+  // 最終来店日の降順（最近来た人が上）
+  segmentResults.sort((a, b) => (b._lastVisit || '').localeCompare(a._lastVisit || ''));
   renderSegmentResults();
 }
 
