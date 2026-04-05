@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>電子カルテ - グラン・セノーテ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#C4707E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ── デザインシステム（グランマリー プロフィールフォーム準拠） ── */
+:root {
+  --bg: #F8F7F5;
+  --surface: #FFFFFF;
+  --border: #E5E5E5;
+  --border-input: #D1D5DB;
+  --accent: #C4707E;
+  --accent-20: rgba(196,112,126,0.12);
+  --accent-40: #E8B4BC;
+  --text: #1A1A1A;
+  --sub: #666666;
+  --muted: #9CA3AF;
+  --label: #374151;
+  --danger: #DC2626;
+  --success: #16A34A;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100dvh;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ── 画面切り替え ── */
+.screen { display:none; }
+.screen.active { display:block; }
+
+/* ── ���ッダー ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-back {
+  background: none; border: none; font-size: 20px; cursor: pointer;
+  color: var(--accent); padding: 4px;
+}
+.header-title { font-size: 17px; font-weight: 500; flex: 1; }
+.header-sub { font-size: 13px; color: var(--sub); }
+
+/* ── カード ��─ */
+.card {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  margin: 12px 16px;
+  padding: 16px;
+  border-left: 4px solid var(--accent);
+}
+.card-plain {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  margin: 12px 16px;
+  padding: 16px;
+}
+.card-title {
+  font-size: 14px; font-weight: 500; color: var(--label);
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+
+/* ── 検索バー ���─ */
+.search-bar {
+  margin: 16px;
+  position: relative;
+}
+.search-bar input {
+  width: 100%;
+  padding: 12px 16px 12px 42px;
+  border: 1px solid var(--border-input);
+  border-radius: 99px;
+  font-size: 16px;
+  font-family: inherit;
+  background: var(--surface);
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+.search-bar input:focus {
+  box-shadow: 0 0 0 3px rgba(196,112,126,0.15);
+  border-color: var(--accent);
+}
+.search-bar::before {
+  content: '\1F50D';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+}
+
+/* ── リスト ── */
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  gap: 12px;
+}
+.list-item:last-child { border-bottom: none; }
+.list-item:active { background: var(--accent-20); }
+.list-name { font-weight: 500; flex: 1; }
+.list-sub { font-size: 13px; color: var(--sub); }
+.list-date { font-size: 12px; color: var(--muted); min-width: 50px; text-align: right; }
+
+/* ── ボタン ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 24px;
+  border: none; border-radius: 99px;
+  font-size: 15px; font-family: inherit; font-weight: 500;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.btn:active { opacity: 0.7; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+.btn-sm { padding: 6px 16px; font-size: 13px; }
+.btn-block { width: 100%; }
+.btn-danger { background: var(--danger); color: #fff; }
+
+/* ── フォーム ── */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block; font-size: 13px; font-weight: 500;
+  color: var(--label); margin-bottom: 4px;
+}
+.form-label .required {
+  background: var(--accent); color: #fff;
+  font-size: 10px; padding: 1px 6px; border-radius: 99px;
+  margin-left: 6px; vertical-align: middle;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-input);
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: inherit;
+  background: var(--surface);
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  box-shadow: 0 0 0 3px rgba(196,112,126,0.15);
+  border-color: var(--accent);
+}
+.form-textarea { resize: vertical; min-height: 80px; }
+
+/* ── タブ ── */
+.tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  margin: 0 16px;
+  gap: 0;
+}
+.tab {
+  flex: 1; padding: 10px 8px; text-align: center;
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  margin-bottom: -2px; transition: all 0.2s;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── スタッフメモ（目立つ） ── */
+.staff-memo-box {
+  background: #FFF7ED;
+  border: 1px solid #FED7AA;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 12px 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.staff-memo-box:empty { display: none; }
+
+/* ── コース残数バッジ ── */
+.course-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  background: var(--accent-20);
+  border-radius: 99px;
+  font-size: 13px;
+  margin: 4px 4px 4px 0;
+}
+.course-badge.low { background: #FEE2E2; color: var(--danger); }
+
+/* ── 空状態 ── */
+.empty-state {
+  text-align: center; padding: 40px 20px;
+  color: var(--muted); font-size: 14px;
+}
+
+/* ── ローディング ── */
+.loading {
+  text-align: center; padding: 20px;
+  color: var(--muted); font-size: 14px;
+}
+
+/* ── モーダル ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); z-index: 200;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface); border-radius: 20px;
+  padding: 24px; width: 90%; max-width: 400px;
+  max-height: 80dvh; overflow-y: auto;
+}
+.modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+.modal-actions .btn { flex: 1; }
+
+/* ── アラート行 ── */
+.alert-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; font-size: 13px; color: var(--sub);
+}
+.alert-icon { font-size: 16px; }
+.alert-days { color: var(--danger); font-weight: 500; }
+
+/* ── 施術履歴テーブル風 ── */
+.record-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 50px 60px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  cursor: pointer;
+}
+.record-row:active { background: var(--accent-20); }
+.record-date { color: var(--sub); font-size: 13px; }
+.record-menu { font-weight: 500; }
+.record-duration { color: var(--sub); font-size: 13px; text-align: right; }
+.record-staff { color: var(--muted); font-size: 12px; text-align: right; }
+
+/* ── 新規顧客ボタン ── */
+.fab {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 28px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(196,112,126,0.4);
+  cursor: pointer;
+  z-index: 50;
+}
+.fab:active { opacity: 0.8; }
+
+/* ── 写真グリッド ── */
+.photo-timeline-date {
+  font-size: 14px; font-weight: 500; color: var(--label);
+  margin: 16px 0 8px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.photo-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--border);
+}
+.photo-thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.photo-thumb-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.5); color: #fff;
+  font-size: 10px; padding: 2px 6px; text-align: center;
+}
+
+/* ── 写真アップロードボタン ── */
+.photo-upload-area {
+  display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0;
+}
+.photo-upload-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 100px; height: 100px;
+  border: 2px dashed var(--border-input); border-radius: 12px;
+  background: var(--bg); cursor: pointer;
+  font-size: 12px; color: var(--muted);
+  gap: 4px;
+}
+.photo-upload-btn:active { border-color: var(--accent); color: var(--accent); }
+.photo-upload-btn .icon { font-size: 24px; }
+.photo-preview {
+  position: relative;
+  width: 100px; height: 100px;
+  border-radius: 12px; overflow: hidden;
+}
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.photo-preview-remove {
+  position: absolute; top: 4px; right: 4px;
+  background: rgba(0,0,0,0.6); color: #fff;
+  border: none; border-radius: 50%;
+  width: 22px; height: 22px;
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.photo-preview-type {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.5); color: #fff;
+  font-size: 10px; padding: 2px; text-align: center;
+}
+
+/* ── 写真拡大モーダル ── */
+.photo-viewer {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.9); z-index: 300;
+  flex-direction: column; align-items: center; justify-content: center;
+}
+.photo-viewer.show { display: flex; }
+.photo-viewer img {
+  max-width: 95vw; max-height: 80vh; object-fit: contain;
+  border-radius: 8px;
+}
+.photo-viewer-close {
+  position: absolute; top: 16px; right: 16px;
+  background: rgba(255,255,255,0.2); color: #fff;
+  border: none; border-radius: 50%;
+  width: 40px; height: 40px; font-size: 24px; cursor: pointer;
+}
+.photo-viewer-info {
+  color: #fff; font-size: 14px; margin-top: 12px; text-align: center;
+}
+
+/* ── ビフォーアフター比較スライダー ── */
+.ba-compare {
+  position: relative; width: 100%; max-width: 500px;
+  aspect-ratio: 1; overflow: hidden; border-radius: 12px;
+  margin: 12px auto; touch-action: none;
+}
+.ba-compare img {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; object-fit: cover;
+}
+.ba-compare .ba-after { clip-path: inset(0 0 0 50%); }
+.ba-slider {
+  position: absolute; top: 0; bottom: 0;
+  left: 50%; width: 3px;
+  background: #fff; z-index: 10; cursor: ew-resize;
+}
+.ba-slider::after {
+  content: '\2194'; position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: #fff; color: var(--text);
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.ba-label {
+  position: absolute; top: 8px; padding: 2px 8px;
+  background: rgba(0,0,0,0.5); color: #fff;
+  font-size: 12px; border-radius: 4px; z-index: 5;
+}
+.ba-label-before { left: 8px; }
+.ba-label-after { right: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ===== 画面1: 顧客検索（トップ） ===== -->
+<div id="screen-search" class="screen active">
+  <div class="header">
+    <div class="header-title">電子カルテ</div>
+    <button class="btn btn-sm btn-outline" onclick="showScreen('segment')">顧客リスト</button>
+  </div>
+
+  <div class="search-bar">
+    <input id="search-input" type="text" placeholder="顧客名で検索..." autocomplete="off">
+  </div>
+
+  <div id="search-results" style="margin:0 16px;"></div>
+
+  <div id="recent-records">
+    <div class="card">
+      <div class="card-title">最近の施術</div>
+      <div id="recent-list" class="loading">読み込み中...</div>
+    </div>
+  </div>
+
+  <div id="product-alerts">
+    <div class="card">
+      <div class="card-title">商品案内アラート</div>
+      <div id="alert-list"></div>
+    </div>
+  </div>
+
+  <button class="fab" onclick="showNewCustomerModal()">+</button>
+</div>
+
+<!-- ===== 画面2: 顧��カルテ（メイン） ===== -->
+<div id="screen-karte" class="screen">
+  <div class="header">
+    <button class="header-back" onclick="showScreen('search')">&larr;</button>
+    <div>
+      <div class="header-title" id="karte-name"></div>
+      <div class="header-sub" id="karte-info"></div>
+    </div>
+    <button class="btn btn-sm btn-outline" onclick="printKarte(10)" title="印刷">&#128424;</button>
+    <button class="btn btn-sm btn-outline" onclick="showEditCustomerModal()">編集</button>
+  </div>
+
+  <div id="karte-staff-memo" class="staff-memo-box"></div>
+
+  <div style="margin:8px 16px;">
+    <div id="karte-courses" style="display:flex; flex-wrap:wrap;"></div>
+    <button class="btn btn-sm btn-outline" onclick="showAddCourseModal()" style="margin-top:4px;">+ コース追加</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="history" onclick="switchTab(this)">施術履歴</div>
+    <div class="tab" data-tab="photos" onclick="switchTab(this)">写真</div>
+    <div class="tab" data-tab="purchases" onclick="switchTab(this)">購入</div>
+    <div class="tab" data-tab="ads" onclick="switchTab(this)">ADS</div>
+  </div>
+
+  <div id="tab-history" class="tab-content" style="margin:0 16px;">
+    <div id="history-list" class="loading">読み込み中...</div>
+  </div>
+  <div id="tab-photos" class="tab-content" style="display:none; margin:12px 16px;">
+    <div id="photos-compare" style="display:none; margin-bottom:12px;">
+      <div class="card-title">ビフォーアフター比較</div>
+      <div id="ba-container" class="ba-compare">
+        <img id="ba-before" class="ba-before" src="">
+        <img id="ba-after" class="ba-after" src="">
+        <div id="ba-slider" class="ba-slider"></div>
+        <div class="ba-label ba-label-before">Before</div>
+        <div class="ba-label ba-label-after">After</div>
+      </div>
+      <div id="ba-date-select" style="text-align:center; margin-top:8px;"></div>
+    </div>
+    <div id="photos-list"></div>
+  </div>
+  <div id="tab-purchases" class="tab-content" style="display:none; margin:12px 16px;">
+    <div id="purchases-alerts"></div>
+    <div id="purchases-list"></div>
+    <div style="margin-top:12px;">
+      <button class="btn btn-outline btn-block btn-sm" onclick="showAddPurchaseModal()">+ 店頭購入を追加</button>
+    </div>
+  </div>
+  <div id="tab-ads" class="tab-content" style="display:none; margin:12px 16px;">
+    <div id="ads-list"></div>
+    <div style="margin-top:12px;">
+      <button class="btn btn-outline btn-block btn-sm" onclick="showAddAdsModal()">+ ADS登録</button>
+    </div>
+  </div>
+
+  <div style="padding:16px;">
+    <button class="btn btn-primary btn-block" onclick="showRecordForm()">+ 施術記録を追加</button>
+  </div>
+</div>
+
+<!-- ===== 画面3: 施術記録入力 ===== -->
+<div id="screen-record" class="screen">
+  <div class="header">
+    <button class="header-back" onclick="showScreen('karte')">&larr;</button>
+    <div class="header-title">施術記録</div>
+    <div class="header-sub" id="record-customer-name"></div>
+  </div>
+
+  <div style="padding:16px;">
+    <div class="form-group">
+      <label class="form-label">日付 <span class="required">必須</span></label>
+      <input id="rec-date" type="date" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">メニュー</label>
+      <input id="rec-menu" type="text" class="form-input" placeholder="フェイシャル、インディバ等">
+    </div>
+    <div style="display:flex; gap:12px;">
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">施術時間（分）</label>
+        <input id="rec-duration" type="number" class="form-input" placeholder="60">
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">担当</label>
+        <select id="rec-staff" class="form-select"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">部屋</label>
+      <select id="rec-room" class="form-select"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">お肌の状態</label>
+      <textarea id="rec-skin" class="form-textarea" placeholder="お肌の状態・所見を記入"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">話した内容</label>
+      <textarea id="rec-talk" class="form-textarea" placeholder="お客様との会話メモ"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">スタッフ間共有メモ</label>
+      <textarea id="rec-staff-memo" class="form-textarea" placeholder="他のスタッフに共有したいこと"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">コース消化</label>
+      <select id="rec-course" class="form-select">
+        <option value="">消化なし</option>
+      </select>
+      <div id="rec-course-remaining" style="font-size:12px; color:var(--sub); margin-top:4px;"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">写真</label>
+      <div id="rec-photos" class="photo-upload-area">
+        <label class="photo-upload-btn">
+          <span class="icon">📷</span>ビフォー
+          <input type="file" accept="image/*" capture="environment" style="display:none"
+                 onchange="addPhoto(this,'before')">
+        </label>
+        <label class="photo-upload-btn">
+          <span class="icon">📷</span>アフター
+          <input type="file" accept="image/*" capture="environment" style="display:none"
+                 onchange="addPhoto(this,'after')">
+        </label>
+        <label class="photo-upload-btn">
+          <span class="icon">📁</span>その他
+          <input type="file" accept="image/*" multiple style="display:none"
+                 onchange="addPhoto(this,'other')">
+        </label>
+      </div>
+      <div id="rec-photo-previews" class="photo-upload-area"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">次回予約日</label>
+      <input id="rec-next" type="date" class="form-input">
+    </div>
+
+    <div style="margin-top:24px; display:flex; gap:12px;">
+      <button class="btn btn-primary btn-block" onclick="saveRecord()">保存</button>
+    </div>
+    <div id="record-edit-actions" style="margin-top:12px; display:none;">
+      <button class="btn btn-danger btn-block btn-sm" onclick="deleteRecord()">この記録を削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 新規顧客モーダル ===== -->
+<div id="modal-new-customer" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-title">新規顧客登録</div>
+    <div class="form-group">
+      <label class="form-label">名前 <span class="required">必須</span></label>
+      <input id="new-name" type="text" class="form-input" placeholder="山田 花子">
+    </div>
+    <div class="form-group">
+      <label class="form-label">電話番号</label>
+      <input id="new-phone" type="tel" class="form-input" placeholder="090-1234-5678">
+    </div>
+    <div class="form-group">
+      <label class="form-label">誕生���</label>
+      <input id="new-birthday" type="date" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ</label>
+      <textarea id="new-memo" class="form-textarea" placeholder="スタッフ共有メモ（付箋の代わり）"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-new-customer')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveNewCustomer()">登録</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 顧客編���モーダル ===== -->
+<div id="modal-edit-customer" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-title">顧客情報編集</div>
+    <div class="form-group">
+      <label class="form-label">名前 <span class="required">必須</span></label>
+      <input id="edit-name" type="text" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">電話番号</label>
+      <input id="edit-phone" type="tel" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">誕生日</label>
+      <input id="edit-birthday" type="date" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ</label>
+      <textarea id="edit-memo" class="form-textarea"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-customer')">キャンセ��</button>
+      <button class="btn btn-primary" onclick="saveEditCustomer()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 画面4: 顧客セグメント・リスト ===== -->
+<div id="screen-segment" class="screen">
+  <div class="header">
+    <button class="header-back" onclick="showScreen('search')">&larr;</button>
+    <div class="header-title">顧客リスト</div>
+    <button class="btn btn-sm btn-outline" onclick="exportCSV()">CSV</button>
+  </div>
+
+  <div style="margin:12px 16px;">
+    <div style="font-size:13px;font-weight:500;color:var(--label);margin-bottom:8px;">プリセット</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+      <button class="btn btn-sm btn-outline" onclick="filterPreset('birthday')">&#128197; 今月誕生日</button>
+      <button class="btn btn-sm btn-outline" onclick="filterPreset('dormant')">&#128680; 3ヶ月未来店</button>
+      <button class="btn btn-sm btn-outline" onclick="filterPreset('course_low')">&#127915; 残り1回以下</button>
+      <button class="btn btn-sm btn-outline" onclick="filterPreset('all')">全員表示</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">カスタム条件</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select id="seg-field" class="form-select" style="flex:1;min-width:120px;">
+          <option value="birthday_month">誕生月</option>
+          <option value="last_visit">最終来店</option>
+          <option value="course_remaining">コース残数</option>
+          <option value="visit_count">来店回数</option>
+          <option value="staff">担当スタッフ</option>
+        </select>
+        <select id="seg-op" class="form-select" style="width:60px;">
+          <option value="eq">=</option>
+          <option value="gte">>=</option>
+          <option value="lte"><=</option>
+        </select>
+        <input id="seg-value" type="text" class="form-input" style="flex:1;min-width:80px;" placeholder="値">
+        <button class="btn btn-sm btn-primary" onclick="runSegmentFilter()">検索</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin:0 16px;">
+    <div id="seg-count" style="font-size:13px;color:var(--sub);margin-bottom:8px;"></div>
+    <div id="seg-results"></div>
+  </div>
+</div>
+
+<!-- ===== コース追加モーダル ===== -->
+<div id="modal-add-course" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-title">コース登録</div>
+    <div class="form-group">
+      <label class="form-label">コース名 <span class="required">必須</span></label>
+      <input id="course-name" type="text" class="form-input" placeholder="インディバ60分、フェイシャル等">
+    </div>
+    <div style="display:flex; gap:12px;">
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">総回数 <span class="required">必須</span></label>
+        <input id="course-total" type="number" class="form-input" placeholder="10">
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">使用済み回数</label>
+        <input id="course-used" type="number" class="form-input" value="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">購入日</label>
+      <input id="course-purchased" type="date" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">有効期限</label>
+      <input id="course-expires" type="date" class="form-input">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-course')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveCourse()">登録</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 商品購入追加モーダル ===== -->
+<div id="modal-add-purchase" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-title">商品購入記録</div>
+    <div class="form-group">
+      <label class="form-label">商品名 <span class="required">必須</span></label>
+      <input id="purchase-product" type="text" class="form-input" placeholder="クレンジング���美容液等">
+    </div>
+    <div style="display:flex; gap:12px;">
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">価格（税込）</label>
+        <input id="purchase-price" type="number" class="form-input" placeholder="3000">
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">消費目安（日）</label>
+        <input id="purchase-days" type="number" class="form-input" placeholder="60">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">購入日</label>
+      <input id="purchase-date" type="date" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">購入元</label>
+      <div style="display:flex; gap:8px;">
+        <label style="flex:1;"><input type="radio" name="purchase-source" value="store" checked> ��頭</label>
+        <label style="flex:1;"><input type="radio" name="purchase-source" value="online"> STORES</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-purchase')">キャンセル</button>
+      <button class="btn btn-primary" onclick="savePurchase()">登録</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADS登録モーダル ===== -->
+<div id="modal-add-ads" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-title">ADS美肌再生プログラム登録</div>
+    <div class="form-group">
+      <label class="form-label">現在のステップ <span class="required">必須</span></label>
+      <input id="ads-step" type="number" class="form-input" placeholder="1" value="1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">ステップ名</label>
+      <input id="ads-step-name" type="text" class="form-input" placeholder="導入フェーズ等">
+    </div>
+    <div class="form-group">
+      <label class="form-label">プログラム開始日</label>
+      <input id="ads-started" type="date" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">中間カウンセリング日</label>
+      <input id="ads-counseling-date" type="date" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">カウンセリング内容</label>
+      <textarea id="ads-counseling-memo" class="form-textarea" placeholder="カウンセリング内容を記入"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-ads')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveAds()">登録</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 写真拡大ビューア ===== -->
+<div id="photo-viewer" class="photo-viewer" onclick="if(event.target===this)this.classList.remove('show')">
+  <button class="photo-viewer-close" onclick="document.getElementById('photo-viewer').classList.remove('show')">&#10005;</button>
+  <img id="photo-viewer-img" src="">
+  <div id="photo-viewer-info" class="photo-viewer-info"></div>
+</div>
+
+<script>
+// ── Supabase API設定 ──
+const SUPABASE_URL = 'https://lheojchyrxjlagxfbgjo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sV418nh9Akoc0EnxchRU4g_H2FFAa-4';
+const SB_HEADERS = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_KEY,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+// ── 状態管理 ──
+let currentCustomer = null;  // 現在表示中の顧客
+let editingRecordId = null;  // 編集中の施術記録ID
+let staffList = [];          // yoyaku_staffから取得
+let roomList = [];           // yoyaku_roomsから取得
+let pendingPhotos = [];      // アップロード待ちの写真 [{file, type, angle, dataUrl}]
+
+// ── Supabase REST API ──
+async function sbGet(table, query) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  });
+  if (!res.ok) { console.error(`GET ${table} failed:`, res.status); return []; }
+  return res.json();
+}
+
+async function sbPost(table, data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data)
+  });
+  if (!res.ok) { console.error(`POST ${table} failed:`, res.status, await res.text()); return null; }
+  const arr = await res.json();
+  return Array.isArray(arr) ? arr[0] : arr;
+}
+
+async function sbPatch(table, query, data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(data)
+  });
+  if (!res.ok) { console.error(`PATCH ${table} failed:`, res.status); return null; }
+  const arr = await res.json();
+  return Array.isArray(arr) ? arr[0] : arr;
+}
+
+async function sbDelete(table, query) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  });
+  return res.ok;
+}
+
+// ── 画面切り替え ──
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'search') loadSearchScreen();
+  if (name === 'karte') loadKarteScreen();
+  if (name === 'segment') filterPreset('all');
+}
+
+// ── ユーティリティ ──
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return `${dt.getMonth()+1}/${dt.getDate()}`;
+}
+function fmtDateFull(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
+}
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function staffName(id) {
+  const s = staffList.find(x => x.id === id);
+  return s ? s.name.replace(/\s/g, '') : '';
+}
+function roomName(id) {
+  const r = roomList.find(x => x.id === id);
+  return r ? r.name : '';
+}
+
+// ══════════════════════════════════
+// 画面1: 顧客検索
+// ══════════════════════════════════
+let searchTimeout = null;
+
+document.getElementById('search-input').addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  const q = this.value.trim();
+  if (q.length < 2) {
+    document.getElementById('search-results').innerHTML = '';
+    document.getElementById('recent-records').style.display = '';
+    document.getElementById('product-alerts').style.display = '';
+    return;
+  }
+  searchTimeout = setTimeout(() => searchCustomers(q), 300);
+});
+
+async function searchCustomers(q) {
+  document.getElementById('recent-records').style.display = 'none';
+  document.getElementById('product-alerts').style.display = 'none';
+  const results = await sbGet('customers', `name=ilike.*${encodeURIComponent(q)}*&order=name&limit=20`);
+  const box = document.getElementById('search-results');
+  if (results.length === 0) {
+    box.innerHTML = '<div class="empty-state">該当する顧客がありません</div>';
+    return;
+  }
+  box.innerHTML = results.map(c => `
+    <div class="list-item" onclick="openKarte('${c.id}')">
+      <div class="list-name">${esc(c.name)}</div>
+      <div class="list-sub">${c.phone || ''}</div>
+    </div>
+  `).join('');
+}
+
+async function loadSearchScreen() {
+  // 最近の施術を取得
+  const records = await sbGet('karte_records',
+    'select=id,date,menu,customer_id,staff_id,customers(name)&order=date.desc,created_at.desc&limit=10');
+  const list = document.getElementById('recent-list');
+  if (records.length === 0) {
+    list.innerHTML = '<div class="empty-state">施術記録がまだありません</div>';
+  } else {
+    list.innerHTML = records.map(r => `
+      <div class="list-item" onclick="openKarte('${r.customer_id}')">
+        <div class="list-date">${fmtDate(r.date)}</div>
+        <div class="list-name">${esc(r.customers?.name || '不明')}</div>
+        <div class="list-sub">${esc(r.menu || '')}</div>
+      </div>
+    `).join('');
+  }
+
+  // 商品案内アラート（購入から60日以上経過）
+  const purchases = await sbGet('karte_purchases',
+    `select=id,product_name,purchased_at,customer_id,estimated_days,customers(name)&order=purchased_at&customer_id=not.is.null`);
+  const alertBox = document.getElementById('alert-list');
+  const today = new Date();
+  const alerts = purchases.filter(p => {
+    if (!p.purchased_at) return false;
+    const days = Math.floor((today - new Date(p.purchased_at)) / 86400000);
+    const threshold = p.estimated_days || 60;
+    return days >= threshold;
+  }).map(p => {
+    const days = Math.floor((today - new Date(p.purchased_at)) / 86400000);
+    return { ...p, days };
+  });
+  if (alerts.length === 0) {
+    alertBox.innerHTML = '<div class="empty-state" style="padding:12px;">アラートなし</div>';
+  } else {
+    alertBox.innerHTML = alerts.map(a => `
+      <div class="alert-row" onclick="openKarte('${a.customer_id}')">
+        <span class="alert-icon">&#9888;&#65039;</span>
+        <span>${esc(a.customers?.name || '')} ${esc(a.product_name)}</span>
+        <span class="alert-days">${a.days}日経過</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ═══��══════════════════════════════
+// 画面2: 顧客カルテ
+// ═════��═════════��══════════════════
+async function openKarte(customerId) {
+  const customers = await sbGet('customers', `id=eq.${customerId}`);
+  if (customers.length === 0) return;
+  currentCustomer = customers[0];
+  showScreen('karte');
+}
+
+async function loadKarteScreen() {
+  if (!currentCustomer) return;
+  const c = currentCustomer;
+
+  // ヘッダー
+  document.getElementById('karte-name').textContent = c.name;
+  const infoParts = [];
+  if (c.birthday) infoParts.push('\uD83C\uDF82 ' + fmtDate(c.birthday));
+  if (c.phone) infoParts.push('\uD83D\uDCDE ' + c.phone);
+  document.getElementById('karte-info').textContent = infoParts.join('  ');
+
+  // スタッフメモ
+  document.getElementById('karte-staff-memo').textContent = c.memo || '';
+
+  // コース残数
+  const courses = await sbGet('karte_courses', `customer_id=eq.${c.id}&status=eq.active&order=course_name`);
+  const coursesBox = document.getElementById('karte-courses');
+  coursesBox.innerHTML = courses.map(co => {
+    const remaining = co.total_count - co.used_count;
+    const low = remaining <= 1;
+    return `<div class="course-badge ${low ? 'low' : ''}">${esc(co.course_name)} 残${remaining}/${co.total_count}回</div>`;
+  }).join('');
+
+  // 施術履歴
+  const records = await sbGet('karte_records',
+    `customer_id=eq.${c.id}&order=date.desc,created_at.desc&limit=50`);
+  const histList = document.getElementById('history-list');
+  if (records.length === 0) {
+    histList.innerHTML = '<div class="empty-state">施術記録がまだありません</div>';
+  } else {
+    histList.innerHTML = records.map(r => `
+      <div class="record-row" onclick="editRecord('${r.id}')">
+        <div class="record-date">${fmtDate(r.date)}</div>
+        <div class="record-menu">${esc(r.menu || '(メニュー未入力)')}</div>
+        <div class="record-duration">${r.duration_min ? r.duration_min + '分' : ''}</div>
+        <div class="record-staff">${staffName(r.staff_id)}</div>
+      </div>
+    `).join('');
+  }
+
+  // デフォルトタブ
+  switchTab(document.querySelector('.tab[data-tab="history"]'));
+}
+
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById('tab-' + el.dataset.tab).style.display = '';
+  if (currentCustomer) {
+    if (el.dataset.tab === 'photos') loadPhotoTimeline(currentCustomer.id);
+    if (el.dataset.tab === 'purchases') loadPurchases(currentCustomer.id);
+    if (el.dataset.tab === 'ads') loadAds(currentCustomer.id);
+  }
+}
+
+// ══════════════════════════���═══════
+// 画面3: 施術記録入力
+// ═════════════════════��════════════
+function showRecordForm(recordId) {
+  editingRecordId = recordId || null;
+  document.getElementById('record-customer-name').textContent = currentCustomer?.name || '';
+  document.getElementById('rec-date').value = todayStr();
+  document.getElementById('rec-menu').value = '';
+  document.getElementById('rec-duration').value = '';
+  document.getElementById('rec-staff').value = '';
+  document.getElementById('rec-room').value = '';
+  document.getElementById('rec-skin').value = '';
+  document.getElementById('rec-talk').value = '';
+  document.getElementById('rec-staff-memo').value = '';
+  document.getElementById('rec-next').value = '';
+  document.getElementById('record-edit-actions').style.display = 'none';
+  pendingPhotos = [];
+  renderPhotoPreviews();
+  document.getElementById('rec-course').value = '';
+  document.getElementById('rec-course-remaining').textContent = '';
+
+  loadCourseOptions();
+
+  if (recordId) {
+    loadRecordForEdit(recordId);
+  }
+  showScreen('record');
+}
+
+async function loadRecordForEdit(id) {
+  const records = await sbGet('karte_records', `id=eq.${id}`);
+  if (records.length === 0) return;
+  const r = records[0];
+  document.getElementById('rec-date').value = r.date || '';
+  document.getElementById('rec-menu').value = r.menu || '';
+  document.getElementById('rec-duration').value = r.duration_min || '';
+  document.getElementById('rec-staff').value = r.staff_id || '';
+  document.getElementById('rec-room').value = r.room_id || '';
+  document.getElementById('rec-skin').value = r.skin_condition || '';
+  document.getElementById('rec-talk').value = r.talk_memo || '';
+  document.getElementById('rec-staff-memo').value = r.staff_memo || '';
+  document.getElementById('rec-next').value = r.next_visit_date || '';
+  document.getElementById('record-edit-actions').style.display = '';
+}
+
+function editRecord(id) {
+  showRecordForm(id);
+}
+
+async function saveRecord() {
+  const data = {
+    customer_id: currentCustomer.id,
+    date: document.getElementById('rec-date').value || todayStr(),
+    menu: document.getElementById('rec-menu').value,
+    duration_min: parseInt(document.getElementById('rec-duration').value) || null,
+    staff_id: document.getElementById('rec-staff').value || null,
+    room_id: document.getElementById('rec-room').value || null,
+    skin_condition: document.getElementById('rec-skin').value,
+    talk_memo: document.getElementById('rec-talk').value,
+    staff_memo: document.getElementById('rec-staff-memo').value,
+    next_visit_date: document.getElementById('rec-next').value || null,
+  };
+
+  let result;
+  if (editingRecordId) {
+    result = await sbPatch('karte_records', `id=eq.${editingRecordId}`, data);
+  } else {
+    result = await sbPost('karte_records', data);
+  }
+
+  if (result) {
+    // 写真があればアップロード
+    if (pendingPhotos.length > 0) {
+      await uploadPendingPhotos(result.id, currentCustomer.id);
+    }
+    // コース消化
+    const courseId = document.getElementById('rec-course').value;
+    if (courseId && !editingRecordId) {
+      await consumeCourse(courseId);
+    }
+    showScreen('karte');
+  } else {
+    alert('保存に失敗しました');
+  }
+}
+
+async function deleteRecord() {
+  if (!editingRecordId) return;
+  if (!confirm('この施術記録を削除しますか？')) return;
+  const ok = await sbDelete('karte_records', `id=eq.${editingRecordId}`);
+  if (ok) {
+    editingRecordId = null;
+    showScreen('karte');
+  } else {
+    alert('削除に失敗しました');
+  }
+}
+
+// ══════════════════════════════════
+// 写真機能
+// ══════════════════════════════════
+
+// 画像圧縮（WebP変換 + リサイズ）
+function compressImage(file, maxWidth = 1200) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.8);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// 写真追加（施術記録入力画面）
+function addPhoto(input, type) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      pendingPhotos.push({ file, type, angle: 'front', dataUrl: e.target.result });
+      renderPhotoPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderPhotoPreviews() {
+  const box = document.getElementById('rec-photo-previews');
+  box.innerHTML = pendingPhotos.map((p, i) => `
+    <div class="photo-preview">
+      <img src="${p.dataUrl}">
+      <button class="photo-preview-remove" onclick="pendingPhotos.splice(${i},1);renderPhotoPreviews()">&#10005;</button>
+      <div class="photo-preview-type">${p.type}</div>
+    </div>
+  `).join('');
+}
+
+// Supabase Storageに写真をアップロード
+async function uploadPhoto(blob, customerId, recordId, index) {
+  const ext = 'webp';
+  const path = `${customerId}/${recordId}_${index}.${ext}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/karte-photos/${path}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'image/webp',
+      'x-upsert': 'true'
+    },
+    body: blob
+  });
+  if (!res.ok) { console.error('Photo upload failed:', res.status); return null; }
+  // publicバケットなので直接URLを返す
+  return `${SUPABASE_URL}/storage/v1/object/public/karte-photos/${path}`;
+}
+
+// 施術記録保存後に写真をアップロード
+async function uploadPendingPhotos(recordId, customerId) {
+  for (let i = 0; i < pendingPhotos.length; i++) {
+    const p = pendingPhotos[i];
+    const compressed = await compressImage(p.file);
+    const url = await uploadPhoto(compressed, customerId, recordId, i);
+    if (url) {
+      await sbPost('karte_photos', {
+        record_id: recordId,
+        customer_id: customerId,
+        photo_url: url,
+        photo_type: p.type,
+        angle: p.angle,
+        shared_to_app: false
+      });
+    }
+  }
+  pendingPhotos = [];
+}
+
+// 写真タイムライン読み込み（カルテ画面・写真タブ）
+async function loadPhotoTimeline(customerId) {
+  const photos = await sbGet('karte_photos',
+    `customer_id=eq.${customerId}&select=id,record_id,photo_url,photo_type,angle,shared_to_app,taken_at,karte_records(date)&order=taken_at.desc`);
+
+  const list = document.getElementById('photos-list');
+  const compare = document.getElementById('photos-compare');
+
+  if (photos.length === 0) {
+    list.innerHTML = '<div class="empty-state">写真がまだありません</div>';
+    compare.style.display = 'none';
+    return;
+  }
+
+  // 日付ごとにグループ化
+  const groups = {};
+  photos.forEach(p => {
+    const date = p.karte_records?.date || 'unknown';
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(p);
+  });
+
+  let html = '';
+  const dates = Object.keys(groups).sort().reverse();
+  dates.forEach(date => {
+    html += `<div class="photo-timeline-date">${fmtDateFull(date)}</div>`;
+    html += '<div class="photo-grid">';
+    groups[date].forEach(p => {
+      html += `
+        <div class="photo-thumb" onclick="viewPhoto('${esc(p.photo_url)}','${p.photo_type} ${p.angle||""}','${fmtDateFull(p.karte_records?.date)}')">
+          <img src="${esc(p.photo_url)}" loading="lazy">
+          <div class="photo-thumb-label">${p.photo_type}${p.angle ? ' '+p.angle : ''}</div>
+        </div>`;
+    });
+    html += '</div>';
+  });
+  list.innerHTML = html;
+
+  // ビフォーアフター比較機能
+  setupBeforeAfterCompare(groups, dates);
+}
+
+function viewPhoto(url, info, date) {
+  document.getElementById('photo-viewer-img').src = url;
+  document.getElementById('photo-viewer-info').textContent = `${date} ${info}`;
+  document.getElementById('photo-viewer').classList.add('show');
+}
+
+function setupBeforeAfterCompare(groups, dates) {
+  const compare = document.getElementById('photos-compare');
+  const baDates = dates.filter(d => {
+    const g = groups[d];
+    return g.some(p => p.photo_type === 'before') && g.some(p => p.photo_type === 'after');
+  });
+
+  if (baDates.length === 0) {
+    compare.style.display = 'none';
+    return;
+  }
+  compare.style.display = '';
+
+  const selectBox = document.getElementById('ba-date-select');
+  selectBox.innerHTML = baDates.map((d, i) =>
+    `<button class="btn btn-sm ${i===0?'btn-primary':'btn-outline'}" style="margin:2px;" onclick="loadBAForDate('${d}');this.parentElement.querySelectorAll('.btn').forEach(b=>{b.classList.remove('btn-primary');b.classList.add('btn-outline')});this.classList.add('btn-primary');this.classList.remove('btn-outline')">${fmtDateFull(d)}</button>`
+  ).join('');
+
+  showBACompareForDate(baDates[0], groups);
+}
+
+async function loadBAForDate(date) {
+  const photos = await sbGet('karte_photos',
+    `customer_id=eq.${currentCustomer.id}&select=photo_url,photo_type,angle,karte_records(date)&order=taken_at`);
+  const dayPhotos = photos.filter(p => p.karte_records?.date === date);
+  const before = dayPhotos.find(p => p.photo_type === 'before');
+  const after = dayPhotos.find(p => p.photo_type === 'after');
+  if (before && after) {
+    document.getElementById('ba-before').src = before.photo_url;
+    document.getElementById('ba-after').src = after.photo_url;
+  }
+}
+
+function showBACompareForDate(date, groups) {
+  const g = groups[date];
+  const before = g.find(p => p.photo_type === 'before');
+  const after = g.find(p => p.photo_type === 'after');
+  if (before && after) {
+    document.getElementById('ba-before').src = before.photo_url;
+    document.getElementById('ba-after').src = after.photo_url;
+  }
+}
+
+// ビフォーアフタースライダー初期化
+(function initBASlider() {
+  const container = document.getElementById('ba-container');
+  const slider = document.getElementById('ba-slider');
+  if (!container || !slider) return;
+
+  function setPosition(x) {
+    const rect = container.getBoundingClientRect();
+    let pct = (x - rect.left) / rect.width * 100;
+    pct = Math.max(0, Math.min(100, pct));
+    slider.style.left = pct + '%';
+    container.querySelector('.ba-after').style.clipPath = `inset(0 0 0 ${pct}%)`;
+  }
+
+  let dragging = false;
+  slider.addEventListener('mousedown', () => dragging = true);
+  slider.addEventListener('touchstart', () => dragging = true, { passive: true });
+  document.addEventListener('mouseup', () => dragging = false);
+  document.addEventListener('touchend', () => dragging = false);
+  document.addEventListener('mousemove', (e) => { if (dragging) setPosition(e.clientX); });
+  document.addEventListener('touchmove', (e) => { if (dragging) setPosition(e.touches[0].clientX); }, { passive: true });
+  container.addEventListener('click', (e) => setPosition(e.clientX));
+})();
+
+// ══════════════════════════════════
+// コース管理
+// ══════════════════════════════════
+function showAddCourseModal() {
+  document.getElementById('course-name').value = '';
+  document.getElementById('course-total').value = '';
+  document.getElementById('course-used').value = '0';
+  document.getElementById('course-purchased').value = todayStr();
+  document.getElementById('course-expires').value = '';
+  document.getElementById('modal-add-course').classList.add('show');
+}
+
+async function saveCourse() {
+  const name = document.getElementById('course-name').value.trim();
+  const total = parseInt(document.getElementById('course-total').value);
+  if (!name || !total) { alert('コース名と総回数を入力してください'); return; }
+  const data = {
+    customer_id: currentCustomer.id,
+    course_name: name,
+    total_count: total,
+    used_count: parseInt(document.getElementById('course-used').value) || 0,
+    purchased_at: document.getElementById('course-purchased').value || null,
+    expires_at: document.getElementById('course-expires').value || null,
+    status: 'active'
+  };
+  const result = await sbPost('karte_courses', data);
+  if (result) {
+    closeModal('modal-add-course');
+    loadKarteScreen();
+  } else {
+    alert('登録に失敗しました');
+  }
+}
+
+// コース消化（施術記録保存時に呼ぶ）
+async function consumeCourse(courseId) {
+  if (!courseId) return;
+  const courses = await sbGet('karte_courses', `id=eq.${courseId}`);
+  if (courses.length === 0) return;
+  const c = courses[0];
+  const newUsed = c.used_count + 1;
+  const newStatus = newUsed >= c.total_count ? 'completed' : 'active';
+  await sbPatch('karte_courses', `id=eq.${courseId}`, {
+    used_count: newUsed,
+    status: newStatus
+  });
+}
+
+// コース選択肢を施術記録入力画面に読み込み
+async function loadCourseOptions() {
+  if (!currentCustomer) return;
+  const courses = await sbGet('karte_courses',
+    `customer_id=eq.${currentCustomer.id}&status=eq.active&order=course_name`);
+  const select = document.getElementById('rec-course');
+  select.innerHTML = '<option value="">消化なし</option>' +
+    courses.map(c => {
+      const remaining = c.total_count - c.used_count;
+      return `<option value="${c.id}">${esc(c.course_name)} (残${remaining}/${c.total_count}回)</option>`;
+    }).join('');
+  select.onchange = function() {
+    const cid = this.value;
+    const c = courses.find(x => x.id === cid);
+    document.getElementById('rec-course-remaining').textContent =
+      c ? `消化後: 残${c.total_count - c.used_count - 1}回` : '';
+  };
+}
+
+// ══════════════════════════════════
+// 商品購入管理
+// ══════════════════════════════════
+function showAddPurchaseModal() {
+  document.getElementById('purchase-product').value = '';
+  document.getElementById('purchase-price').value = '';
+  document.getElementById('purchase-days').value = '60';
+  document.getElementById('purchase-date').value = todayStr();
+  document.querySelector('input[name="purchase-source"][value="store"]').checked = true;
+  document.getElementById('modal-add-purchase').classList.add('show');
+}
+
+async function savePurchase() {
+  const product = document.getElementById('purchase-product').value.trim();
+  if (!product) { alert('商品名を入力してください'); return; }
+  const data = {
+    customer_id: currentCustomer.id,
+    product_name: product,
+    price: parseInt(document.getElementById('purchase-price').value) || null,
+    purchased_at: document.getElementById('purchase-date').value || null,
+    source: document.querySelector('input[name="purchase-source"]:checked').value,
+    estimated_days: parseInt(document.getElementById('purchase-days').value) || 60,
+    auto_imported: false
+  };
+  const result = await sbPost('karte_purchases', data);
+  if (result) {
+    closeModal('modal-add-purchase');
+    loadPurchases(currentCustomer.id);
+  } else {
+    alert('登録に失敗しました');
+  }
+}
+
+// 購入タブの読み込み
+async function loadPurchases(customerId) {
+  const purchases = await sbGet('karte_purchases',
+    `customer_id=eq.${customerId}&order=purchased_at.desc`);
+  const list = document.getElementById('purchases-list');
+  const alertBox = document.getElementById('purchases-alerts');
+  const today = new Date();
+
+  // アラート（消費目安を超えた商品）
+  const alerts = purchases.filter(p => {
+    if (!p.purchased_at) return false;
+    const days = Math.floor((today - new Date(p.purchased_at)) / 86400000);
+    return days >= (p.estimated_days || 60);
+  });
+  if (alerts.length > 0) {
+    alertBox.innerHTML = '<div class="card" style="border-left-color:var(--danger);"><div class="card-title" style="color:var(--danger);">そろそろ案内</div>' +
+      alerts.map(a => {
+        const days = Math.floor((today - new Date(a.purchased_at)) / 86400000);
+        return `<div class="alert-row"><span class="alert-icon">&#9888;&#65039;</span><span>${esc(a.product_name)}</span><span class="alert-days">${days}日経過</span></div>`;
+      }).join('') + '</div>';
+  } else {
+    alertBox.innerHTML = '';
+  }
+
+  // 購入一覧
+  if (purchases.length === 0) {
+    list.innerHTML = '<div class="empty-state">購入履歴がありません</div>';
+  } else {
+    list.innerHTML = purchases.map(p => {
+      const days = p.purchased_at ? Math.floor((today - new Date(p.purchased_at)) / 86400000) : null;
+      return `<div class="list-item" style="cursor:default;">
+        <div class="list-name">${esc(p.product_name)}</div>
+        <div class="list-sub">${p.source === 'online' ? 'STORES' : '店頭'}${p.auto_imported ? ' 自動' : ''}</div>
+        <div class="list-date">${p.purchased_at ? fmtDate(p.purchased_at) : ''}</div>
+        ${p.price ? `<div style="font-size:12px;color:var(--sub);">${p.price.toLocaleString()}円</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+}
+
+// ══════════════════════════════════
+// ADS管理
+// ══════════════════════════════════
+let editingAdsId = null;
+
+function showAddAdsModal(id) {
+  editingAdsId = id || null;
+  document.getElementById('ads-step').value = '1';
+  document.getElementById('ads-step-name').value = '';
+  document.getElementById('ads-started').value = todayStr();
+  document.getElementById('ads-counseling-date').value = '';
+  document.getElementById('ads-counseling-memo').value = '';
+  if (id) loadAdsForEdit(id);
+  document.getElementById('modal-add-ads').classList.add('show');
+}
+
+async function loadAdsForEdit(id) {
+  const records = await sbGet('karte_ads_progress', `id=eq.${id}`);
+  if (records.length === 0) return;
+  const r = records[0];
+  document.getElementById('ads-step').value = r.step_number;
+  document.getElementById('ads-step-name').value = r.step_name || '';
+  document.getElementById('ads-started').value = r.started_at || '';
+  document.getElementById('ads-counseling-date').value = r.counseling_date || '';
+  document.getElementById('ads-counseling-memo').value = r.counseling_memo || '';
+}
+
+async function saveAds() {
+  const step = parseInt(document.getElementById('ads-step').value);
+  if (!step) { alert('ステップ番号を入力してください'); return; }
+  const data = {
+    customer_id: currentCustomer.id,
+    step_number: step,
+    step_name: document.getElementById('ads-step-name').value,
+    started_at: document.getElementById('ads-started').value || null,
+    counseling_date: document.getElementById('ads-counseling-date').value || null,
+    counseling_memo: document.getElementById('ads-counseling-memo').value,
+    status: 'in_progress'
+  };
+  let result;
+  if (editingAdsId) {
+    result = await sbPatch('karte_ads_progress', `id=eq.${editingAdsId}`, data);
+  } else {
+    result = await sbPost('karte_ads_progress', data);
+  }
+  if (result) {
+    closeModal('modal-add-ads');
+    loadAds(currentCustomer.id);
+  } else {
+    alert('登録に失敗しました');
+  }
+}
+
+async function loadAds(customerId) {
+  const records = await sbGet('karte_ads_progress',
+    `customer_id=eq.${customerId}&order=step_number`);
+  const list = document.getElementById('ads-list');
+  if (records.length === 0) {
+    list.innerHTML = '<div class="empty-state">ADS登録がありません</div>';
+    return;
+  }
+  list.innerHTML = records.map(r => {
+    const statusLabel = r.status === 'completed' ? '<span style="color:var(--success);font-weight:700;">完了</span>' : '<span style="color:var(--accent);font-weight:700;">進行中</span>';
+    return `<div class="card" onclick="showAddAdsModal('${r.id}')" style="cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title">Step ${r.step_number}${r.step_name ? ' - '+esc(r.step_name) : ''}</div>
+        ${statusLabel}
+      </div>
+      ${r.started_at ? `<div style="font-size:12px;color:var(--sub);">開始: ${fmtDateFull(r.started_at)}</div>` : ''}
+      ${r.counseling_date ? `<div style="font-size:12px;color:var(--sub);">カウンセリング: ${fmtDateFull(r.counseling_date)}</div>` : ''}
+      ${r.counseling_memo ? `<div style="font-size:13px;margin-top:4px;white-space:pre-wrap;">${esc(r.counseling_memo)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════
+// カルテ印刷機能
+// ══════════════════════════════════
+async function printKarte(count) {
+  if (!currentCustomer) return;
+  const records = await sbGet('karte_records',
+    `customer_id=eq.${currentCustomer.id}&order=date.desc&limit=${count || 10}`);
+  const courses = await sbGet('karte_courses',
+    `customer_id=eq.${currentCustomer.id}&status=eq.active&order=course_name`);
+
+  const c = currentCustomer;
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>カルテ - ${c.name}</title>
+<style>
+@page { margin: 15mm; }
+body { font-family: 'Noto Sans JP', sans-serif; font-size: 11px; color: #1a1a1a; }
+h1 { font-size: 16px; border-bottom: 2px solid #C4707E; padding-bottom: 4px; margin-bottom: 8px; }
+.info { display: flex; gap: 16px; margin-bottom: 8px; font-size: 12px; }
+.memo { background: #FFF7ED; border: 1px solid #FED7AA; padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-size: 11px; white-space: pre-wrap; }
+.courses { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.course-tag { background: rgba(196,112,126,0.12); padding: 2px 8px; border-radius: 12px; font-size: 10px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 10px; }
+th { background: #f5f5f5; font-weight: 700; }
+tr:nth-child(even) { background: #fafafa; }
+</style></head><body>
+<h1>${c.name}</h1>
+<div class="info">`;
+  if (c.birthday) html += `<span>誕生日: ${fmtDateFull(c.birthday)}</span>`;
+  if (c.phone) html += `<span>TEL: ${c.phone}</span>`;
+  html += `<span>印刷日: ${fmtDateFull(todayStr())}</span></div>`;
+  if (c.memo) html += `<div class="memo">${c.memo}</div>`;
+  if (courses.length > 0) {
+    html += '<div class="courses">';
+    courses.forEach(co => {
+      html += `<span class="course-tag">${co.course_name} 残${co.total_count-co.used_count}/${co.total_count}回</span>`;
+    });
+    html += '</div>';
+  }
+  html += `<table><thead><tr><th>日付</th><th>メニュー</th><th>時間</th><th>肌状態</th><th>購入商品</th><th>担当</th></tr></thead><tbody>`;
+  records.forEach(r => {
+    html += `<tr>
+      <td>${fmtDateFull(r.date)}</td>
+      <td>${r.menu || ''}</td>
+      <td>${r.duration_min ? r.duration_min+'分' : ''}</td>
+      <td>${r.skin_condition || ''}</td>
+      <td>${r.staff_memo || ''}</td>
+      <td>${staffName(r.staff_id)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></body></html>';
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  w.print();
+}
+
+// ══════════════════════════════════
+// 顧客セグメント・リスト
+// ══════════════════════════════════
+let segmentResults = [];
+
+async function filterPreset(type) {
+  const all = await sbGet('customers', 'order=name&limit=500');
+  const today = new Date();
+  const thisMonth = today.getMonth() + 1;
+
+  if (type === 'all') {
+    segmentResults = all;
+    renderSegmentResults();
+    return;
+  }
+
+  if (type === 'birthday') {
+    segmentResults = all.filter(c => {
+      if (!c.birthday) return false;
+      return new Date(c.birthday).getMonth() + 1 === thisMonth;
+    });
+    renderSegmentResults();
+    return;
+  }
+
+  // 最終来店日・来店回数はkarte_recordsからJOINして計算
+  const records = await sbGet('karte_records', 'select=customer_id,date&order=date.desc');
+  const customerLastVisit = {};
+  const customerVisitCount = {};
+  records.forEach(r => {
+    if (!customerLastVisit[r.customer_id]) customerLastVisit[r.customer_id] = r.date;
+    customerVisitCount[r.customer_id] = (customerVisitCount[r.customer_id] || 0) + 1;
+  });
+
+  if (type === 'dormant') {
+    const threeMonthsAgo = new Date(today);
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const threshold = threeMonthsAgo.toISOString().split('T')[0];
+    segmentResults = all.filter(c => {
+      const lastVisit = customerLastVisit[c.id];
+      return !lastVisit || lastVisit < threshold;
+    });
+    // 最終来店日の情報を付与
+    segmentResults = segmentResults.map(c => ({
+      ...c, _lastVisit: customerLastVisit[c.id] || null,
+      _visitCount: customerVisitCount[c.id] || 0
+    }));
+    renderSegmentResults();
+    return;
+  }
+
+  if (type === 'course_low') {
+    const courses = await sbGet('karte_courses', 'status=eq.active');
+    const lowCourseCustomers = new Set();
+    courses.forEach(co => {
+      if (co.total_count - co.used_count <= 1) lowCourseCustomers.add(co.customer_id);
+    });
+    segmentResults = all.filter(c => lowCourseCustomers.has(c.id));
+    segmentResults = segmentResults.map(c => ({
+      ...c, _lastVisit: customerLastVisit[c.id] || null,
+      _visitCount: customerVisitCount[c.id] || 0
+    }));
+    renderSegmentResults();
+    return;
+  }
+}
+
+async function runSegmentFilter() {
+  const field = document.getElementById('seg-field').value;
+  const op = document.getElementById('seg-op').value;
+  const val = document.getElementById('seg-value').value.trim();
+  if (!val) { alert('値を入力してください'); return; }
+
+  const all = await sbGet('customers', 'order=name&limit=500');
+  const records = await sbGet('karte_records', 'select=customer_id,date&order=date.desc');
+  const customerLastVisit = {};
+  const customerVisitCount = {};
+  records.forEach(r => {
+    if (!customerLastVisit[r.customer_id]) customerLastVisit[r.customer_id] = r.date;
+    customerVisitCount[r.customer_id] = (customerVisitCount[r.customer_id] || 0) + 1;
+  });
+
+  let filtered = all;
+
+  if (field === 'birthday_month') {
+    const month = parseInt(val);
+    filtered = all.filter(c => c.birthday && new Date(c.birthday).getMonth() + 1 === month);
+  } else if (field === 'last_visit') {
+    const months = parseInt(val);
+    const threshold = new Date();
+    threshold.setMonth(threshold.getMonth() - months);
+    const ts = threshold.toISOString().split('T')[0];
+    if (op === 'gte') {
+      filtered = all.filter(c => !customerLastVisit[c.id] || customerLastVisit[c.id] < ts);
+    } else {
+      filtered = all.filter(c => customerLastVisit[c.id] && customerLastVisit[c.id] >= ts);
+    }
+  } else if (field === 'visit_count') {
+    const count = parseInt(val);
+    if (op === 'gte') {
+      filtered = all.filter(c => (customerVisitCount[c.id] || 0) >= count);
+    } else if (op === 'lte') {
+      filtered = all.filter(c => (customerVisitCount[c.id] || 0) <= count);
+    } else {
+      filtered = all.filter(c => (customerVisitCount[c.id] || 0) === count);
+    }
+  } else if (field === 'course_remaining') {
+    const courses = await sbGet('karte_courses', 'status=eq.active');
+    const customerRemaining = {};
+    courses.forEach(co => {
+      const rem = co.total_count - co.used_count;
+      customerRemaining[co.customer_id] = Math.min(customerRemaining[co.customer_id] ?? Infinity, rem);
+    });
+    const n = parseInt(val);
+    if (op === 'lte') {
+      filtered = all.filter(c => customerRemaining[c.id] !== undefined && customerRemaining[c.id] <= n);
+    } else if (op === 'gte') {
+      filtered = all.filter(c => customerRemaining[c.id] !== undefined && customerRemaining[c.id] >= n);
+    }
+  } else if (field === 'staff') {
+    const staffId = val;
+    const custIds = new Set(records.filter(r => r.staff_id === staffId).map(r => r.customer_id));
+    filtered = all.filter(c => custIds.has(c.id));
+  }
+
+  segmentResults = filtered.map(c => ({
+    ...c, _lastVisit: customerLastVisit[c.id] || null,
+    _visitCount: customerVisitCount[c.id] || 0
+  }));
+  renderSegmentResults();
+}
+
+function renderSegmentResults() {
+  document.getElementById('seg-count').textContent = `結果: ${segmentResults.length}名`;
+  const box = document.getElementById('seg-results');
+  if (segmentResults.length === 0) {
+    box.innerHTML = '<div class="empty-state">該当する顧客がいません</div>';
+    return;
+  }
+  box.innerHTML = segmentResults.map(c => `
+    <div class="list-item" onclick="openKarte('${c.id}')">
+      <div class="list-name">${esc(c.name)}</div>
+      <div class="list-sub">${c._lastVisit ? '最終:'+fmtDate(c._lastVisit) : '未来店'}${c._visitCount ? ' / '+c._visitCount+'回' : ''}</div>
+      <div class="list-date">${c.phone || ''}</div>
+    </div>
+  `).join('');
+}
+
+function exportCSV() {
+  if (segmentResults.length === 0) { alert('検索結果がありません'); return; }
+  let csv = '名前,電話番号,誕生日,最終来店,来店回数\n';
+  segmentResults.forEach(c => {
+    csv += `"${c.name}","${c.phone||''}","${c.birthday||''}","${c._lastVisit||''}","${c._visitCount||0}"\n`;
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `顧客リスト_${todayStr()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ══════════════════════════════════
+// 新規顧客登録
+// ══════════════════════════════════
+function showNewCustomerModal() {
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-phone').value = '';
+  document.getElementById('new-birthday').value = '';
+  document.getElementById('new-memo').value = '';
+  document.getElementById('modal-new-customer').classList.add('show');
+}
+
+async function saveNewCustomer() {
+  const name = document.getElementById('new-name').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  const phone = document.getElementById('new-phone').value.replace(/[-\s]/g, '').trim() || null;
+  const data = {
+    name,
+    phone,
+    birthday: document.getElementById('new-birthday').value || null,
+    memo: document.getElementById('new-memo').value,
+  };
+  const result = await sbPost('customers', data);
+  if (result) {
+    closeModal('modal-new-customer');
+    currentCustomer = result;
+    showScreen('karte');
+  } else {
+    alert('登録に失敗しました。電話番号が重複している可能性があります。');
+  }
+}
+
+// ══════════════════════════════════
+// 顧客編集
+// ══════════════════════��═══════════
+function showEditCustomerModal() {
+  if (!currentCustomer) return;
+  document.getElementById('edit-name').value = currentCustomer.name || '';
+  document.getElementById('edit-phone').value = currentCustomer.phone || '';
+  document.getElementById('edit-birthday').value = currentCustomer.birthday || '';
+  document.getElementById('edit-memo').value = currentCustomer.memo || '';
+  document.getElementById('modal-edit-customer').classList.add('show');
+}
+
+async function saveEditCustomer() {
+  const name = document.getElementById('edit-name').value.trim();
+  if (!name) { alert('名前を入力���てください'); return; }
+  const phone = document.getElementById('edit-phone').value.replace(/[-\s]/g, '').trim() || null;
+  const data = {
+    name,
+    phone,
+    birthday: document.getElementById('edit-birthday').value || null,
+    memo: document.getElementById('edit-memo').value,
+  };
+  const result = await sbPatch('customers', `id=eq.${currentCustomer.id}`, data);
+  if (result) {
+    currentCustomer = result;
+    closeModal('modal-edit-customer');
+    loadKarteScreen();
+  } else {
+    alert('保���に失敗しました。電話番号が重複している可能性があります。');
+  }
+}
+
+// ── モーダル操作 ──
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+// ── HTMLエスケープ ──
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ═══════════���══════════════════════
+// 初期化
+// ══════════════════��═══════════════
+async function init() {
+  // 予約帳のスタッフ・部屋マスタを取得（共有テーブル参照）
+  [staffList, roomList] = await Promise.all([
+    sbGet('yoyaku_staff', 'order=sort_order'),
+    sbGet('yoyaku_rooms', 'order=sort_order'),
+  ]);
+
+  // スタッフ選択肢を構築
+  const staffSelect = document.getElementById('rec-staff');
+  staffSelect.innerHTML = '<option value="">選択してください</option>' +
+    staffList.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+
+  // 部屋選択肢を構築
+  const roomSelect = document.getElementById('rec-room');
+  roomSelect.innerHTML = '<option value="">選択してください</option>' +
+    roomList.map(r => `<option value="${r.id}">${esc(r.name)}${r.sub ? ' ('+esc(r.sub)+')' : ''}</option>`).join('');
+
+  // 検索画面を読み込み
+  loadSearchScreen();
+
+  // URLパラメータで顧客IDが渡された場合（予約帳からの連携）
+  const params = new URLSearchParams(location.search);
+  const cid = params.get('customer_id');
+  if (cid) {
+    openKarte(cid);
+  }
+}
+
+// PWA登録
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
+init();
+</script>
+</body>
+</html>
