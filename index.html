@@ -931,7 +931,10 @@ body {
     </div>
     <div class="form-group">
       <label class="form-label">誕生日</label>
-      <input id="new-birthday" type="date" class="form-input">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="new-birthday-month" class="form-input" style="flex:1;"><option value="">月</option></select>
+        <select id="new-birthday-day" class="form-input" style="flex:1;"><option value="">日（任意）</option></select>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">メモ</label>
@@ -962,7 +965,10 @@ body {
     </div>
     <div class="form-group">
       <label class="form-label">誕生日</label>
-      <input id="edit-birthday" type="date" class="form-input">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="edit-birthday-month" class="form-input" style="flex:1;"><option value="">月</option></select>
+        <select id="edit-birthday-day" class="form-input" style="flex:1;"><option value="">日（任意）</option></select>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">メモ</label>
@@ -1303,6 +1309,15 @@ function fmtDateFull(d) {
   const dt = new Date(d);
   return `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
 }
+function fmtBirthday(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  const m = dt.getMonth() + 1;
+  const day = dt.getDate();
+  // 年=2000 & 日=1 → 月のみ登録
+  if (dt.getFullYear() === 2000 && day === 1) return `${m}月生まれ`;
+  return `${m}月${day}日`;
+}
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -1519,7 +1534,7 @@ async function loadKarteScreen() {
   document.getElementById('karte-avatar').textContent = c.name.charAt(0);
   document.getElementById('karte-summary-name').textContent = c.name;
   const infoParts = [];
-  if (c.birthday) infoParts.push(fmtDate(c.birthday));
+  if (c.birthday) infoParts.push(fmtBirthday(c.birthday));
   if (c.phone) infoParts.push(formatPhone(c.phone));
 
   // 来店回数を取得（HP移行分 + カルテ記録）
@@ -2200,7 +2215,7 @@ tr:nth-child(even) { background: #fafafa; }
 </style></head><body>
 <h1>${c.name}</h1>
 <div class="info">`;
-  if (c.birthday) html += `<span>誕生日: ${fmtDateFull(c.birthday)}</span>`;
+  if (c.birthday) html += `<span>誕生日: ${fmtBirthday(c.birthday)}</span>`;
   if (c.phone) html += `<span>TEL: ${c.phone}</span>`;
   html += `<span>印刷日: ${fmtDateFull(todayStr())}</span></div>`;
   if (c.memo) html += `<div class="memo">${c.memo}</div>`;
@@ -2421,6 +2436,39 @@ function exportCSV() {
 }
 
 // ==================================
+// 誕生日セレクト ヘルパー
+// ==================================
+function initBirthdaySelects(prefix) {
+  const mSel = document.getElementById(prefix + '-birthday-month');
+  const dSel = document.getElementById(prefix + '-birthday-day');
+  if (mSel.options.length <= 1) {
+    for (let m = 1; m <= 12; m++) mSel.add(new Option(m + '月', m));
+  }
+  if (dSel.options.length <= 1) {
+    for (let d = 1; d <= 31; d++) dSel.add(new Option(d + '日', d));
+  }
+}
+
+function setBirthdaySelects(prefix, val) {
+  initBirthdaySelects(prefix);
+  const mSel = document.getElementById(prefix + '-birthday-month');
+  const dSel = document.getElementById(prefix + '-birthday-day');
+  if (!val) { mSel.value = ''; dSel.value = ''; return; }
+  const dt = new Date(val);
+  mSel.value = dt.getMonth() + 1;
+  // 日が1日 = 月のみ登録の可能性 → 日は空のまま
+  const day = dt.getDate();
+  dSel.value = (day === 1 && dt.getFullYear() === 2000) ? '' : day;
+}
+
+function getBirthdayFromSelects(prefix) {
+  const m = document.getElementById(prefix + '-birthday-month').value;
+  if (!m) return null;
+  const d = document.getElementById(prefix + '-birthday-day').value || '1';
+  return `2000-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+// ==================================
 // 新規顧客登録
 // ==================================
 let pendingReservationId = null; // 予約紐付け用
@@ -2430,7 +2478,7 @@ function showNewCustomerModal() {
   document.getElementById('new-name').value = '';
   document.getElementById('new-kana').value = '';
   document.getElementById('new-phone').value = '';
-  document.getElementById('new-birthday').value = '';
+  setBirthdaySelects('new', null);
   document.getElementById('new-memo').value = '';
   document.getElementById('modal-new-customer').classList.add('show');
 }
@@ -2441,7 +2489,7 @@ function quickRegister(name, reservationId) {
   document.getElementById('new-name').value = name;
   document.getElementById('new-kana').value = '';
   document.getElementById('new-phone').value = '';
-  document.getElementById('new-birthday').value = '';
+  setBirthdaySelects('new', null);
   document.getElementById('new-memo').value = '';
   document.getElementById('modal-new-customer').classList.add('show');
 }
@@ -2456,7 +2504,7 @@ async function saveNewCustomer() {
     name,
     name_kana: document.getElementById('new-kana').value.trim(),
     phone,
-    birthday: document.getElementById('new-birthday').value || null,
+    birthday: getBirthdayFromSelects('new'),
     memo: document.getElementById('new-memo').value,
   };
   const result = await sbPost('customers', data);
@@ -2484,7 +2532,7 @@ function showEditCustomerModal() {
   document.getElementById('edit-name').value = currentCustomer.name || '';
   document.getElementById('edit-kana').value = currentCustomer.name_kana || '';
   document.getElementById('edit-phone').value = currentCustomer.phone || '';
-  document.getElementById('edit-birthday').value = currentCustomer.birthday || '';
+  setBirthdaySelects('edit', currentCustomer.birthday);
   document.getElementById('edit-memo').value = currentCustomer.memo || '';
   document.getElementById('modal-edit-customer').classList.add('show');
 }
@@ -2499,7 +2547,7 @@ async function saveEditCustomer() {
     name,
     name_kana: document.getElementById('edit-kana').value.trim(),
     phone,
-    birthday: document.getElementById('edit-birthday').value || null,
+    birthday: getBirthdayFromSelects('edit'),
     memo: document.getElementById('edit-memo').value,
   };
   const result = await sbPatch('customers', `id=eq.${currentCustomer.id}`, data);
