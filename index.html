@@ -691,7 +691,7 @@ body {
 <!-- ===== 画面2: 顧客カルテ（メイン） ===== -->
 <div id="screen-karte" class="screen">
   <div class="header">
-    <button class="header-back" onclick="showScreen('search')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="header-back" onclick="goBack()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="header-title" id="karte-name" style="flex:1;"></div>
     <button class="btn btn-sm btn-outline" onclick="printKarte(10)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
     <button class="btn btn-sm btn-outline" onclick="showEditCustomerModal()">編集</button>
@@ -769,7 +769,7 @@ body {
 <!-- ===== 画面2.5: 施術カルテ詳細（閲覧） ===== -->
 <div id="screen-record-view" class="screen">
   <div class="header">
-    <button class="header-back" onclick="showScreen('karte')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="header-back" onclick="goBack()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="header-title" id="rv-title">施術カルテ</div>
   </div>
 
@@ -829,7 +829,7 @@ body {
 <!-- ===== 画面3: 施術記録入力 ===== -->
 <div id="screen-record" class="screen">
   <div class="header">
-    <button class="header-back" onclick="showScreen('karte')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="header-back" onclick="goBack()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="header-title">施術記録</div>
     <div class="header-sub" id="record-customer-name"></div>
   </div>
@@ -978,9 +978,13 @@ body {
 <!-- ===== 画面4: 顧客セグメント・リスト ===== -->
 <div id="screen-segment" class="screen">
   <div class="header">
-    <button class="header-back" onclick="showScreen('search')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="header-back" onclick="goBack()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="header-title">顧客リスト</div>
     <button class="btn btn-sm btn-outline" onclick="exportCSV()">CSV</button>
+  </div>
+
+  <div class="search-bar">
+    <input id="seg-search-input" type="text" placeholder="名前・フリガナ・電話番号で検索..." autocomplete="off">
   </div>
 
   <div style="margin:12px 16px;">
@@ -1199,12 +1203,27 @@ async function sbDelete(table, query) {
 }
 
 // ── 画面切り替え ──
-function showScreen(name) {
+let screenHistory = ['search'];
+
+function showScreen(name, skipHistory) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + name).classList.add('active');
+  if (!skipHistory && screenHistory[screenHistory.length - 1] !== name) {
+    screenHistory.push(name);
+  }
   if (name === 'search') loadSearchScreen();
   if (name === 'karte') loadKarteScreen();
-  if (name === 'segment') filterPreset('all');
+  if (name === 'segment') loadSegmentScreen();
+}
+
+function goBack() {
+  if (screenHistory.length > 1) {
+    screenHistory.pop(); // 現在の画面を捨てる
+    const prev = screenHistory[screenHistory.length - 1];
+    showScreen(prev, true); // 履歴に追加しない
+  } else {
+    showScreen('search', true);
+  }
 }
 
 // ── ユーティリティ ──
@@ -1241,7 +1260,8 @@ document.getElementById('search-input').addEventListener('input', function() {
   const q = this.value.trim();
   if (q.length < 1) {
     document.getElementById('search-results').innerHTML = '';
-    document.getElementById('recent-records').style.display = '';
+    document.getElementById('main-menu').style.display = '';
+    document.getElementById('daily-schedule').style.display = '';
     document.getElementById('product-alerts').style.display = '';
     return;
   }
@@ -1249,7 +1269,8 @@ document.getElementById('search-input').addEventListener('input', function() {
 });
 
 async function searchCustomers(q) {
-  document.getElementById('recent-records').style.display = 'none';
+  document.getElementById('main-menu').style.display = 'none';
+  document.getElementById('daily-schedule').style.display = 'none';
   document.getElementById('product-alerts').style.display = 'none';
   const results = await sbGet('customers', `or=(name.ilike.*${encodeURIComponent(q)}*,name_kana.ilike.*${encodeURIComponent(q)}*,phone.ilike.*${encodeURIComponent(q)}*)&order=name&limit=20`);
   const box = document.getElementById('search-results');
@@ -2128,6 +2149,34 @@ tr:nth-child(even) { background: #fafafa; }
 // 顧客セグメント・リスト
 // ==================================
 let segmentResults = [];
+let segSearchTimeout = null;
+
+function loadSegmentScreen() {
+  filterPreset('all');
+  // 検索バーのイベント設定
+  const input = document.getElementById('seg-search-input');
+  input.value = '';
+  input.oninput = function() {
+    clearTimeout(segSearchTimeout);
+    const q = this.value.trim();
+    if (q.length < 1) { filterPreset('all'); return; }
+    segSearchTimeout = setTimeout(async () => {
+      const results = await sbGet('customers', `or=(name.ilike.*${encodeURIComponent(q)}*,name_kana.ilike.*${encodeURIComponent(q)}*,phone.ilike.*${encodeURIComponent(q)}*)&order=name&limit=50`);
+      const records = await sbGet('karte_records', 'select=customer_id,date&order=date.desc');
+      const customerLastVisit = {};
+      const customerVisitCount = {};
+      records.forEach(r => {
+        if (!customerLastVisit[r.customer_id]) customerLastVisit[r.customer_id] = r.date;
+        customerVisitCount[r.customer_id] = (customerVisitCount[r.customer_id] || 0) + 1;
+      });
+      segmentResults = results.map(c => ({
+        ...c, _lastVisit: customerLastVisit[c.id] || null,
+        _visitCount: customerVisitCount[c.id] || 0
+      }));
+      renderSegmentResults();
+    }, 300);
+  };
+}
 
 async function filterPreset(type) {
   const all = await sbGet('customers', 'order=name&limit=500');
