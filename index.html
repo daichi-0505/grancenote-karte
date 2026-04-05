@@ -1018,15 +1018,11 @@ body {
             <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
           </select>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <span style="font-size:14px;min-width:80px;">最終来店</span>
-          <select id="seg-last-visit" class="form-select" style="flex:1;" onchange="runCombinedFilter()">
-            <option value="">指定なし</option>
-            <option value="1">1ヶ月以上前</option>
-            <option value="2">2ヶ月以上前</option>
-            <option value="3">3ヶ月以上前</option>
-            <option value="6">半年以上前</option>
-          </select>
+          <input id="seg-last-visit-from" type="date" class="form-input" style="flex:1;min-width:120px;" onchange="runCombinedFilter()">
+          <span style="font-size:14px;">〜</span>
+          <input id="seg-last-visit-to" type="date" class="form-input" style="flex:1;min-width:120px;" onchange="runCombinedFilter()">
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <span style="font-size:14px;min-width:80px;">来店回数</span>
@@ -2346,7 +2342,16 @@ async function runCombinedFilter() {
     });
   }
 
+  // 統合最終来店日（カルテ記録 vs HP来店日の新しい方）
+  function mergedLastVisit(c) {
+    const kv = customerLastVisit[c.id];
+    const hv = c.hp_last_visit;
+    return (kv && hv) ? (kv > hv ? kv : hv) : (kv || hv || null);
+  }
+
   let filtered = all.filter(c => {
+    const lv = mergedLastVisit(c);
+
     // プリセット（AND結合: 全て満たす）
     if (activePresets.has('birthday')) {
       if (!c.birthday || new Date(c.birthday).getMonth() + 1 !== thisMonth) return false;
@@ -2354,7 +2359,6 @@ async function runCombinedFilter() {
     if (activePresets.has('dormant')) {
       const ago = new Date(today); ago.setMonth(ago.getMonth() - 3);
       const ts = ago.toISOString().split('T')[0];
-      const lv = customerLastVisit[c.id];
       if (lv && lv >= ts) return false;
     }
     if (activePresets.has('course_low')) {
@@ -2367,12 +2371,12 @@ async function runCombinedFilter() {
       if (!c.birthday || new Date(c.birthday).getMonth() + 1 !== parseInt(bMonth)) return false;
     }
 
-    const lastVisit = document.getElementById('seg-last-visit')?.value;
-    if (lastVisit) {
-      const ago = new Date(today); ago.setMonth(ago.getMonth() - parseInt(lastVisit));
-      const ts = ago.toISOString().split('T')[0];
-      const lv = customerLastVisit[c.id];
-      if (lv && lv >= ts) return false;
+    const lvFrom = document.getElementById('seg-last-visit-from')?.value;
+    const lvTo = document.getElementById('seg-last-visit-to')?.value;
+    if (lvFrom || lvTo) {
+      if (!lv) return false;
+      if (lvFrom && lv < lvFrom) return false;
+      if (lvTo && lv > lvTo) return false;
     }
 
     const visitCount = document.getElementById('seg-visit-count')?.value;
@@ -2390,7 +2394,8 @@ async function runCombinedFilter() {
   // フィルタ未指定時は最終来店6ヶ月以内のみ（デフォルト）
   const hasAnyFilter = activePresets.size > 0 ||
     document.getElementById('seg-birthday-month')?.value ||
-    document.getElementById('seg-last-visit')?.value ||
+    document.getElementById('seg-last-visit-from')?.value ||
+    document.getElementById('seg-last-visit-to')?.value ||
     document.getElementById('seg-visit-count')?.value;
 
   if (!hasAnyFilter) {
@@ -2398,7 +2403,7 @@ async function runCombinedFilter() {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     const ts6 = sixMonthsAgo.toISOString().split('T')[0];
     filtered = filtered.filter(c => {
-      const lv = customerLastVisit[c.id] || c.hp_last_visit;
+      const lv = mergedLastVisit(c);
       return lv && lv >= ts6;
     });
   }
@@ -2420,7 +2425,8 @@ async function runCombinedFilter() {
 function renderSegmentResults() {
   const hasAny = activePresets.size > 0 ||
     document.getElementById('seg-birthday-month')?.value ||
-    document.getElementById('seg-last-visit')?.value ||
+    document.getElementById('seg-last-visit-from')?.value ||
+    document.getElementById('seg-last-visit-to')?.value ||
     document.getElementById('seg-visit-count')?.value ||
     document.getElementById('seg-search-input')?.value?.trim();
   document.getElementById('seg-count').textContent = hasAny
