@@ -44,7 +44,7 @@ body {
 .screen { display:none; }
 .screen.active { display:block; }
 
-/* ── ���ッダー ── */
+/* ── ヘッダー ── */
 .header {
   background: var(--surface);
   border-bottom: 3px solid var(--accent);
@@ -71,7 +71,7 @@ body {
 .header-title { font-size: 22px; font-weight: 700; flex: 1; }
 .header-sub { font-size: 12px; color: var(--sub); }
 
-/* ── カード ��─ */
+/* ── カード ── */
 .card {
   background: var(--surface);
   border-radius: 18px;
@@ -94,7 +94,7 @@ body {
   margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
 }
 
-/* ── 検索バー ���─ */
+/* ── 検索バー ── */
 .search-bar {
   margin: 16px;
   position: relative;
@@ -500,7 +500,7 @@ body {
   </div>
 </div>
 
-<!-- ===== 画面2: 顧��カルテ（メイン） ===== -->
+<!-- ===== 画面2: 顧客カルテ（メイン） ===== -->
 <div id="screen-karte" class="screen">
   <div class="header">
     <button class="header-back" onclick="showScreen('search')">&larr;</button>
@@ -666,7 +666,7 @@ body {
       <input id="new-phone" type="tel" class="form-input" placeholder="090-1234-5678">
     </div>
     <div class="form-group">
-      <label class="form-label">誕生���</label>
+      <label class="form-label">誕生日</label>
       <input id="new-birthday" type="date" class="form-input">
     </div>
     <div class="form-group">
@@ -680,7 +680,7 @@ body {
   </div>
 </div>
 
-<!-- ===== 顧客編���モーダル ===== -->
+<!-- ===== 顧客編集モーダル ===== -->
 <div id="modal-edit-customer" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
     <div class="modal-title">顧客情報編集</div>
@@ -705,7 +705,7 @@ body {
       <textarea id="edit-memo" class="form-textarea"></textarea>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeModal('modal-edit-customer')">キャンセ��</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-customer')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveEditCustomer()">保存</button>
     </div>
   </div>
@@ -794,7 +794,7 @@ body {
     <div class="modal-title">商品購入記録</div>
     <div class="form-group">
       <label class="form-label">商品名 <span class="required">必須</span></label>
-      <input id="purchase-product" type="text" class="form-input" placeholder="クレンジング���美容液等">
+      <input id="purchase-product" type="text" class="form-input" placeholder="クレンジング、美容液等">
     </div>
     <div style="display:flex; gap:12px;">
       <div class="form-group" style="flex:1;">
@@ -813,7 +813,7 @@ body {
     <div class="form-group">
       <label class="form-label">購入元</label>
       <div style="display:flex; gap:8px;">
-        <label style="flex:1;"><input type="radio" name="purchase-source" value="store" checked> ��頭</label>
+        <label style="flex:1;"><input type="radio" name="purchase-source" value="store" checked> 店頭</label>
         <label style="flex:1;"><input type="radio" name="purchase-source" value="online"> STORES</label>
       </div>
     </div>
@@ -948,9 +948,9 @@ function roomName(id) {
   return r ? r.name : '';
 }
 
-// ══════════════════════════════════
+// ==================================
 // 画面1: 顧客検索
-// ══════════════════════════════════
+// ==================================
 let searchTimeout = null;
 
 document.getElementById('search-input').addEventListener('input', function() {
@@ -1026,9 +1026,9 @@ async function loadSearchScreen() {
   }
 }
 
-// ═══��══════════════════════════════
+// ==================================
 // 画面2: 顧客カルテ
-// ═════��═════════��══════════════════
+// ==================================
 async function openKarte(customerId) {
   const customers = await sbGet('customers', `id=eq.${customerId}`);
   if (customers.length === 0) return;
@@ -1044,7 +1044,7 @@ async function loadKarteScreen() {
   document.getElementById('karte-name').textContent = c.name;
   const infoParts = [];
   if (c.birthday) infoParts.push(fmtDate(c.birthday));
-  if (c.phone) infoParts.push(c.phone);
+  if (c.phone) infoParts.push(formatPhone(c.phone));
   document.getElementById('karte-info').textContent = infoParts.join('  ');
 
   // スタッフメモ
@@ -1092,9 +1092,9 @@ function switchTab(el) {
   }
 }
 
-// ══════════════════════════���═══════
+// ==================================
 // 画面3: 施術記録入力
-// ═════════════════════��════════════
+// ==================================
 function showRecordForm(recordId) {
   editingRecordId = recordId || null;
   document.getElementById('record-customer-name').textContent = currentCustomer?.name || '';
@@ -1190,9 +1190,9 @@ async function deleteRecord() {
   }
 }
 
-// ══════════════════════════════════
+// ==================================
 // 写真機能
-// ══════════════════════════════════
+// ==================================
 
 // 画像圧縮（WebP変換 + リサイズ）
 function compressImage(file, maxWidth = 1200) {
@@ -1394,9 +1394,9 @@ function showBACompareForDate(date, groups) {
   container.addEventListener('click', (e) => setPosition(e.clientX));
 })();
 
-// ══════════════════════════════════
+// ==================================
 // コース管理
-// ══════════════════════════════════
+// ==================================
 function showAddCourseModal() {
   document.getElementById('course-name').value = '';
   document.getElementById('course-total').value = '';
@@ -1461,9 +1461,9 @@ async function loadCourseOptions() {
   };
 }
 
-// ══════════════════════════════════
+// ==================================
 // 商品購入管理
-// ══════════════════════════════════
+// ==================================
 function showAddPurchaseModal() {
   document.getElementById('purchase-product').value = '';
   document.getElementById('purchase-price').value = '';
@@ -1534,9 +1534,9 @@ async function loadPurchases(customerId) {
   }
 }
 
-// ══════════════════════════════════
+// ==================================
 // ADS管理
-// ══════════════════════════════════
+// ==================================
 let editingAdsId = null;
 
 function showAddAdsModal(id) {
@@ -1609,9 +1609,9 @@ async function loadAds(customerId) {
   }).join('');
 }
 
-// ══════════════════════════════════
+// ==================================
 // カルテ印刷機能
-// ══════════════════════════════════
+// ==================================
 async function printKarte(count) {
   if (!currentCustomer) return;
   const records = await sbGet('karte_records',
@@ -1667,9 +1667,9 @@ tr:nth-child(even) { background: #fafafa; }
   w.print();
 }
 
-// ══════════════════════════════════
+// ==================================
 // 顧客セグメント・リスト
-// ══════════════════════════════════
+// ==================================
 let segmentResults = [];
 
 async function filterPreset(type) {
@@ -1830,9 +1830,9 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
-// ══════════════════════════════════
+// ==================================
 // 新規顧客登録
-// ══════════════════════════════════
+// ==================================
 function showNewCustomerModal() {
   document.getElementById('new-name').value = '';
   document.getElementById('new-kana').value = '';
@@ -1845,7 +1845,7 @@ function showNewCustomerModal() {
 async function saveNewCustomer() {
   const name = document.getElementById('new-name').value.trim();
   if (!name) { alert('名前を入力してください'); return; }
-  const phone = document.getElementById('new-phone').value.replace(/[-\s]/g, '').trim() || null;
+  const phone = normalizePhone(document.getElementById('new-phone').value);
   const data = {
     name,
     name_kana: document.getElementById('new-kana').value.trim(),
@@ -1863,9 +1863,9 @@ async function saveNewCustomer() {
   }
 }
 
-// ══════════════════════════════════
+// ==================================
 // 顧客編集
-// ══════════════════════��═══════════
+// ==================================
 function showEditCustomerModal() {
   if (!currentCustomer) return;
   document.getElementById('edit-name').value = currentCustomer.name || '';
@@ -1878,8 +1878,8 @@ function showEditCustomerModal() {
 
 async function saveEditCustomer() {
   const name = document.getElementById('edit-name').value.trim();
-  if (!name) { alert('名前を入力���てください'); return; }
-  const phone = document.getElementById('edit-phone').value.replace(/[-\s]/g, '').trim() || null;
+  if (!name) { alert('名前を入力してください'); return; }
+  const phone = normalizePhone(document.getElementById('edit-phone').value);
   const data = {
     name,
     name_kana: document.getElementById('edit-kana').value.trim(),
@@ -1893,7 +1893,7 @@ async function saveEditCustomer() {
     closeModal('modal-edit-customer');
     loadKarteScreen();
   } else {
-    alert('保���に失敗しました。電話番号が重複している可能性があります。');
+    alert('保存に失敗しました。電話番号が重複している可能性があります。');
   }
 }
 
@@ -1903,6 +1903,24 @@ function closeModal(id) {
 }
 
 // ── HTMLエスケープ ──
+// 電話番号正規化（全角→半角、ハイフン・スペース・カッコ除去）
+function normalizePhone(raw) {
+  if (!raw) return null;
+  let p = raw
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))  // 全角→半角
+    .replace(/[\-\s\(\)\u2010\u2011\u2012\u2013\u2014\u2015\u30FC\uFF0D\uFF70]/g, '')  // ハイフン類除去
+    .trim();
+  return p || null;
+}
+
+// 電話番号表示用（090-1234-5678 形式）
+function formatPhone(phone) {
+  if (!phone) return '';
+  if (phone.length === 11) return phone.slice(0,3) + '-' + phone.slice(3,7) + '-' + phone.slice(7);
+  if (phone.length === 10) return phone.slice(0,3) + '-' + phone.slice(3,6) + '-' + phone.slice(6);
+  return phone;
+}
+
 const CHEVRON = `<svg class="list-chevron" viewBox="0 0 18 18" fill="none" stroke="#C4A97D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5L12 9L6.5 14.5"/></svg>`;
 const CHEVRON_WARN = CHEVRON.replace('#C4A97D', '#C47070');
 // SVGアイコン定数
@@ -1930,9 +1948,9 @@ function esc(s) {
   return d.innerHTML;
 }
 
-// ═══════════���══════════════════════
+// ==================================
 // 初期化
-// ══════════════════��═══════════════
+// ==================================
 async function init() {
   // 予約帳のスタッフ・部屋マスタを取得（共有テーブル参照）
   [staffList, roomList] = await Promise.all([
