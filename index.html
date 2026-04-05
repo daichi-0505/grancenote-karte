@@ -1462,11 +1462,16 @@ async function loadKarteScreen() {
   if (c.birthday) infoParts.push(fmtDate(c.birthday));
   if (c.phone) infoParts.push(formatPhone(c.phone));
 
-  // 来店回数を取得
+  // 来店回数を取得（HP移行分 + カルテ記録）
   const allRecords = await sbGet('karte_records',
     `customer_id=eq.${c.id}&order=date.desc,created_at.desc&limit=50`);
+  const hpCount = c.hp_visit_count || 0;
+  const karteCount = allRecords.length;
+  const totalVisits = hpCount + karteCount;
+  if (totalVisits > 0) {
+    infoParts.push(`来店${totalVisits}回`);
+  }
   if (allRecords.length > 0) {
-    infoParts.push(`来店${allRecords.length}回`);
     infoParts.push(`最終 ${fmtDate(allRecords[0].date)}`);
   }
   document.getElementById('karte-summary-info').textContent = infoParts.join(' / ');
@@ -2323,7 +2328,7 @@ function renderSegmentResults() {
       <div class="avatar">${esc(c.name).charAt(0)}</div>
       <div style="flex:1;">
         <div class="list-name">${esc(c.name)}</div>
-        <div class="list-sub">${c._lastVisit ? '最終:'+fmtDateFull(c._lastVisit) : '未来店'}${c._visitCount ? ' / '+c._visitCount+'回' : ''}${c.phone ? ' / '+formatPhone(c.phone) : ''}</div>
+        <div class="list-sub">${c._lastVisit ? '最終:'+fmtDateFull(c._lastVisit) : ''}${(c._visitCount + (c.hp_visit_count||0)) ? ' / '+(c._visitCount + (c.hp_visit_count||0))+'回' : ''}${c.phone ? ' / '+formatPhone(c.phone) : ''}</div>
       </div>
       ${CHEVRON}
     </div>
