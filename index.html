@@ -534,6 +534,58 @@ body {
 }
 .ba-label-before { left: 8px; }
 .ba-label-after { right: 8px; }
+
+/* ── 日付ナビゲーション ── */
+.date-nav {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; padding: 4px 0 8px;
+}
+.date-nav-btn {
+  background: none; border: none; cursor: pointer;
+  padding: 8px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.date-nav-btn:active { background: var(--accent-20); }
+.date-nav-label {
+  font-size: 16px; font-weight: 700; color: var(--text);
+  min-width: 160px; text-align: center;
+}
+
+/* ── スタッフフィルタチップ ── */
+.staff-chips {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 0 0 10px;
+}
+.staff-chip {
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-size: 13px; font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--sub);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.staff-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ── アコーディオン展開ボタン ── */
+.expand-btn {
+  display: block; width: 100%;
+  padding: 12px;
+  background: none; border: 1px dashed var(--border);
+  border-radius: 12px;
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-dark);
+  cursor: pointer;
+  text-align: center;
+  margin-top: 8px;
+}
+.expand-btn:active { background: var(--accent-20); }
 </style>
 </head>
 <body>
@@ -565,10 +617,16 @@ body {
     </div>
   </div>
 
-  <div id="recent-records">
-    <div class="card">
-      <div class="card-title">最近の施術</div>
-      <div id="recent-list" class="loading">読み込み中...</div>
+  <div id="daily-schedule">
+    <div class="card" style="border-left-color: var(--accent);">
+      <div class="date-nav">
+        <button class="date-nav-btn" onclick="shiftScheduleDate(-1)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <div class="date-nav-label" id="schedule-date-label"></div>
+        <button class="date-nav-btn" onclick="shiftScheduleDate(1)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <div class="staff-chips" id="staff-filter-chips"></div>
+      <div id="schedule-list" class="loading">読み込み中...</div>
+      <button class="expand-btn" id="schedule-expand" style="display:none;" onclick="toggleScheduleExpand()"></button>
     </div>
   </div>
 
@@ -1082,27 +1140,111 @@ async function searchCustomers(q) {
   `).join('');
 }
 
-async function loadSearchScreen() {
-  // 最近の施術を取得
-  const records = await sbGet('karte_records',
-    'select=id,date,menu,customer_id,staff_id,customers(name)&order=date.desc,created_at.desc&limit=10');
-  const list = document.getElementById('recent-list');
-  if (records.length === 0) {
-    list.innerHTML = '<div class="empty-state">施術記録がまだありません</div>';
+// ── 今日の施術（予約帳連携） ──
+let scheduleDate = new Date();
+let scheduleExpanded = false;
+let activeStaffFilter = null;
+let scheduleData = [];
+
+const DAYS = ['日','月','火','水','木','金','土'];
+function fmtScheduleDate(d) {
+  return `${d.getMonth()+1}月${d.getDate()}日(${DAYS[d.getDay()]})の施術`;
+}
+
+function shiftScheduleDate(offset) {
+  scheduleDate.setDate(scheduleDate.getDate() + offset);
+  scheduleExpanded = false;
+  loadSchedule();
+}
+
+function toggleStaffFilter(staffId, btn) {
+  if (activeStaffFilter === staffId) {
+    activeStaffFilter = null;
   } else {
-    list.innerHTML = records.map(r => `
-      <div class="list-item-card" onclick="openKarte('${r.customer_id}')">
-        <div class="avatar">${esc(r.customers?.name || '?').charAt(0)}</div>
-        <div style="flex:1;">
-          <div class="list-name">${esc(r.customers?.name || '不明')}</div>
-          <div class="list-sub">${fmtDate(r.date)}  ${esc(r.menu || '')}</div>
-        </div>
-        ${CHEVRON}
-      </div>
-    `).join('');
+    activeStaffFilter = staffId;
+  }
+  document.querySelectorAll('.staff-chip').forEach(c => c.classList.remove('active'));
+  if (activeStaffFilter) btn.classList.add('active');
+  renderScheduleList();
+}
+
+function toggleScheduleExpand() {
+  scheduleExpanded = !scheduleExpanded;
+  renderScheduleList();
+}
+
+async function loadSchedule() {
+  const dk = `${scheduleDate.getFullYear()}-${String(scheduleDate.getMonth()+1).padStart(2,'0')}-${String(scheduleDate.getDate()).padStart(2,'0')}`;
+  document.getElementById('schedule-date-label').textContent = fmtScheduleDate(scheduleDate);
+
+  // 予約帳から当日の予約を取得（施術のみ）
+  const reservations = await sbGet('yoyaku_reservations',
+    `date=eq.${dk}&type=eq.treatment&order=start_time&select=id,name,menu,staff_id,start_time,end_time,customer_id`);
+  scheduleData = reservations;
+
+  // スタッフフィルタチップ
+  const staffIds = [...new Set(reservations.map(r => r.staff_id).filter(Boolean))];
+  const chips = document.getElementById('staff-filter-chips');
+  chips.innerHTML = '<button class="staff-chip ' + (!activeStaffFilter ? 'active' : '') + '" onclick="activeStaffFilter=null;document.querySelectorAll(\'.staff-chip\').forEach(c=>c.classList.remove(\'active\'));this.classList.add(\'active\');renderScheduleList()">全員</button>' +
+    staffIds.map(sid =>
+      `<button class="staff-chip ${activeStaffFilter===sid?'active':''}" onclick="toggleStaffFilter('${sid}',this)">${staffName(sid)}</button>`
+    ).join('');
+
+  renderScheduleList();
+}
+
+function renderScheduleList() {
+  let filtered = scheduleData;
+  if (activeStaffFilter) {
+    filtered = filtered.filter(r => r.staff_id === activeStaffFilter);
   }
 
-  // 商品案内アラート（購入から60日以上経過）
+  const list = document.getElementById('schedule-list');
+  const expandBtn = document.getElementById('schedule-expand');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state">この日の予約はありません</div>';
+    expandBtn.style.display = 'none';
+    return;
+  }
+
+  // レスポンシブ: iPadなら10人、iPhoneなら3人
+  const defaultShow = window.innerWidth >= 768 ? 10 : 3;
+  const showAll = scheduleExpanded || filtered.length <= defaultShow;
+  const visible = showAll ? filtered : filtered.slice(0, defaultShow);
+  const remaining = filtered.length - defaultShow;
+
+  list.innerHTML = visible.map(r => {
+    const hasKarte = !!r.customer_id;
+    return `<div class="list-item-card" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : ''}" style="${hasKarte ? '' : 'opacity:0.7;cursor:default;'}">
+      <div class="avatar">${esc(r.name || '?').charAt(0)}</div>
+      <div style="flex:1;">
+        <div class="list-name">${esc(r.name)}</div>
+        <div class="list-sub">${r.start_time}〜${r.end_time}  ${esc(r.menu || '')}  ${staffName(r.staff_id)}</div>
+      </div>
+      ${hasKarte ? `<div class="list-action">カルテ ${CHEVRON}</div>` : '<div class="list-sub" style="font-size:12px;">未登録</div>'}
+    </div>`;
+  }).join('');
+
+  if (!showAll && remaining > 0) {
+    expandBtn.style.display = '';
+    expandBtn.textContent = `他 ${remaining}名を表示`;
+  } else if (showAll && filtered.length > defaultShow) {
+    expandBtn.style.display = '';
+    expandBtn.textContent = '折りたたむ';
+  } else {
+    expandBtn.style.display = 'none';
+  }
+}
+
+async function loadSearchScreen() {
+  // 今日の施術を読み込み
+  scheduleDate = new Date();
+  scheduleExpanded = false;
+  activeStaffFilter = null;
+  await loadSchedule();
+
+  // 商品案内アラート
   const purchases = await sbGet('karte_purchases',
     `select=id,product_name,purchased_at,customer_id,estimated_days,customers(name)&order=purchased_at&customer_id=not.is.null`);
   const alertBox = document.getElementById('alert-list');
