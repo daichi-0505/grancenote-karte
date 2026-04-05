@@ -1,7 +1,7 @@
 {
-  "name": "電子カルテ - グラン・セノーテ",
+  "name": "顧客カルテ - グラン・セノーテ",
   "short_name": "カルテ",
-  "description": "グラン・セノーテ 電子カルテ管理システム",
+  "description": "グラン・セノーテ 顧客カルテ管理システム",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",
