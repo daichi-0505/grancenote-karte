@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>顧客カルテ - グラン・セノーテ</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#C4A97D">
@@ -29,7 +29,7 @@
   --danger: #C47070;
   --success: #16A34A;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+* { margin:0; padding:0; box-sizing:border-box; touch-action: manipulation; }
 html, body {
   overflow-x: hidden;
 }
@@ -1386,7 +1386,7 @@ function showScreen(name, skipHistory, skipReload) {
   if (!skipHistory && screenHistory[screenHistory.length - 1] !== name) {
     screenHistory.push(name);
   }
-  if (name === 'search') loadSearchScreen();
+  if (name === 'search' && !skipReload) loadSearchScreen();
   if (name === 'karte') loadKarteScreen();
   if (name === 'segment' && !skipReload) loadSegmentScreen();
 }
@@ -1611,10 +1611,12 @@ function renderScheduleList() {
     }
     const custInfo = hasKarte ? scheduleCustomerMap[r.customer_id] : null;
     const custBadges = custInfo ? customerBadges(custInfo) : '';
+    const badgeRow = (karteBadge || custBadges) ? `<div style="margin-bottom:2px;">${karteBadge}${custBadges}</div>` : '';
     return `<div class="schedule-card ${hasKarte ? '' : 'no-karte'}" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : `quickRegister('${esc(r.name).replace(/'/g,"\\'")}','${r.id}')`}">
       <div class="schedule-time">${r.start_time}~</div>
       <div class="schedule-info">
-        <div class="schedule-name">${esc(r.name)} ${karteBadge}${custBadges}</div>
+        ${badgeRow}
+        <div class="schedule-name">${esc(r.name)}</div>
         <div class="schedule-meta">${esc(r.menu || '')}${sName ? `<span class="schedule-staff">${sName}</span>` : ''}</div>
       </div>
       ${hasKarte ? CHEVRON : '<span class="schedule-unreg">+ 登録</span>'}
