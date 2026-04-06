@@ -1937,6 +1937,11 @@ async function saveRecord(status) {
     if (courseId && !editingRecordId) {
       await consumeCourse(courseId);
     }
+    // 完了保存時にNEWバッジを自動解除
+    if (status === 'complete' && currentCustomer.is_new) {
+      await sbPatch('customers', `id=eq.${currentCustomer.id}`, { is_new: false });
+      currentCustomer.is_new = false;
+    }
     hideSaving();
     showScreen('karte');
   } else {
