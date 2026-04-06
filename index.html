@@ -247,6 +247,8 @@ body {
 .karte-status-draft { background: #FFF3E0; color: #E67E22; }
 .karte-status-done { background: #E8F5E9; color: #27AE60; }
 .monthly-visits { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: rgba(196,169,125,0.12); color: var(--accent-dark); margin-top: 4px; }
+.badge-birthday { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #FCE4EC; color: #C2185B; margin-left: 4px; }
+.badge-new { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #E8F5E9; color: #2E7D32; margin-left: 4px; }
 
 /* ── フォーム ── */
 .form-group { margin-bottom: 16px; }
@@ -966,6 +968,30 @@ body {
       </div>
     </div>
     <div class="form-group">
+      <label class="form-label">契約コース</label>
+      <select id="new-plan" class="form-select">
+        <option value="">なし</option>
+        <optgroup label="定額コース">
+          <option value="月1ゴールド">月1ゴールド</option>
+          <option value="月1プラチナ">月1プラチナ</option>
+          <option value="月1ダイヤ">月1ダイヤ</option>
+          <option value="月2ゴールド">月2ゴールド</option>
+          <option value="月2プラチナ">月2プラチナ</option>
+          <option value="月2ダイヤ">月2ダイヤ</option>
+        </optgroup>
+        <optgroup label="ヒゲ脱毛">
+          <option value="月1ヒゲ脱毛">月1ヒゲ脱毛</option>
+          <option value="月2ヒゲ脱毛">月2ヒゲ脱毛</option>
+        </optgroup>
+        <optgroup label="回数券">
+          <option value="回数券10回">回数券10回</option>
+          <option value="回数券20回">回数券20回</option>
+          <option value="回数券30回">回数券30回</option>
+        </optgroup>
+      </select>
+      <input id="new-plan-custom" type="text" class="form-input" placeholder="上記にない場合はここに入力" style="font-size:13px;margin-top:4px;">
+    </div>
+    <div class="form-group">
       <label class="form-label">メモ</label>
       <textarea id="new-memo" class="form-textarea" placeholder="スタッフ共有メモ（付箋の代わり）"></textarea>
     </div>
@@ -1029,6 +1055,12 @@ body {
     <div class="form-group">
       <label class="form-label">メモ</label>
       <textarea id="edit-memo" class="form-textarea"></textarea>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input id="edit-is-new" type="checkbox" style="width:18px;height:18px;">
+        <span class="form-label" style="margin:0;">NEWバッジを表示</span>
+      </label>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-edit-customer')">キャンセル</button>
@@ -1507,6 +1539,7 @@ function toggleScheduleExpand() {
 }
 
 let scheduleKarteMap = {}; // customer_id → karte status for schedule date
+let scheduleCustomerMap = {}; // customer_id → customer info for badges
 
 async function loadSchedule() {
   const dk = `${scheduleDate.getFullYear()}-${String(scheduleDate.getMonth()+1).padStart(2,'0')}-${String(scheduleDate.getDate()).padStart(2,'0')}`;
@@ -1522,9 +1555,16 @@ async function loadSchedule() {
   scheduleKarteMap = {};
   karteRecords.forEach(kr => {
     const prev = scheduleKarteMap[kr.customer_id];
-    // 複数記録ある場合: completeが1つでもあればcomplete、なければdraft
     if (!prev || kr.status === 'complete') scheduleKarteMap[kr.customer_id] = kr.status || 'complete';
   });
+
+  // 予約に紐付く顧客情報を取得（バッジ表示用）
+  const cids = reservations.filter(r => r.customer_id).map(r => r.customer_id);
+  scheduleCustomerMap = {};
+  if (cids.length > 0) {
+    const custs = await sbGet('customers', `id=in.(${cids.join(',')})&select=id,birthday,is_new,membership_plan`);
+    custs.forEach(c => { scheduleCustomerMap[c.id] = c; });
+  }
 
   // スタッフフィルタチップ
   const staffIds = [...new Set(reservations.map(r => r.staff_id).filter(Boolean))];
@@ -1569,10 +1609,12 @@ function renderScheduleList() {
       else if (ks === 'draft') karteBadge = '<span class="karte-status karte-status-draft">記入途中</span>';
       else karteBadge = '<span class="karte-status karte-status-none">未記入</span>';
     }
+    const custInfo = hasKarte ? scheduleCustomerMap[r.customer_id] : null;
+    const custBadges = custInfo ? customerBadges(custInfo) : '';
     return `<div class="schedule-card ${hasKarte ? '' : 'no-karte'}" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : `quickRegister('${esc(r.name).replace(/'/g,"\\'")}','${r.id}')`}">
       <div class="schedule-time">${r.start_time}~</div>
       <div class="schedule-info">
-        <div class="schedule-name">${esc(r.name)} ${karteBadge}</div>
+        <div class="schedule-name">${esc(r.name)} ${karteBadge}${custBadges}</div>
         <div class="schedule-meta">${esc(r.menu || '')}${sName ? `<span class="schedule-staff">${sName}</span>` : ''}</div>
       </div>
       ${hasKarte ? CHEVRON : '<span class="schedule-unreg">+ 登録</span>'}
@@ -1640,7 +1682,7 @@ async function loadKarteScreen() {
 
   // ヘッダー
   const age = getAge(c.birthday);
-  document.getElementById('karte-name').innerHTML = esc(c.name) + (age !== null ? ` <span style="font-size:16px;color:var(--sub);font-weight:400;">(${age}歳)</span>` : '');
+  document.getElementById('karte-name').innerHTML = esc(c.name) + (age !== null ? ` <span style="font-size:16px;color:var(--sub);font-weight:400;">(${age}歳)</span>` : '') + customerBadges(c);
 
   // サマリーカード
   document.getElementById('karte-avatar').textContent = c.name.charAt(0);
@@ -2573,7 +2615,7 @@ function renderSegmentResults() {
     <div class="list-item-card" onclick="openKarte('${c.id}')">
       <div class="avatar">${esc(c.name).charAt(0)}</div>
       <div style="flex:1;">
-        <div class="list-name">${esc(c.name)}${c.membership_plan ? `<span class="plan-badge" style="font-size:10px;padding:2px 7px;margin-left:6px;">${esc(c.membership_plan)}</span>` : ''}</div>
+        <div class="list-name">${esc(c.name)}${c.membership_plan ? `<span class="plan-badge" style="font-size:10px;padding:2px 7px;margin-left:6px;">${esc(c.membership_plan)}</span>` : ''}${customerBadges(c)}</div>
         <div class="list-sub">${c._lastVisit ? '最終:'+fmtDateFull(c._lastVisit) : (c.hp_last_visit ? '最終:'+fmtDateFull(c.hp_last_visit) : '')}${(c._visitCount + (c.hp_visit_count||0)) ? ' / '+(c._visitCount + (c.hp_visit_count||0))+'回' : ''}${c.phone ? ' / '+formatPhone(c.phone) : ''}</div>
       </div>
       ${CHEVRON}
@@ -2650,6 +2692,8 @@ function showNewCustomerModal() {
   document.getElementById('new-kana').value = '';
   document.getElementById('new-phone').value = '';
   setBirthdaySelects('new', null);
+  document.getElementById('new-plan').value = '';
+  document.getElementById('new-plan-custom').value = '';
   document.getElementById('new-memo').value = '';
   document.getElementById('modal-new-customer').classList.add('show');
 }
@@ -2661,6 +2705,8 @@ function quickRegister(name, reservationId) {
   document.getElementById('new-kana').value = '';
   document.getElementById('new-phone').value = '';
   setBirthdaySelects('new', null);
+  document.getElementById('new-plan').value = '';
+  document.getElementById('new-plan-custom').value = '';
   document.getElementById('new-memo').value = '';
   document.getElementById('modal-new-customer').classList.add('show');
 }
@@ -2671,12 +2717,16 @@ async function saveNewCustomer() {
   if (!name) { alert('名前を入力してください'); return; }
   showSaving('登録中...');
   const phone = normalizePhone(document.getElementById('new-phone').value);
+  const newPlanSelect = document.getElementById('new-plan').value;
+  const newPlanCustom = document.getElementById('new-plan-custom').value.trim();
   const data = {
     name,
     name_kana: document.getElementById('new-kana').value.trim(),
     phone,
     birthday: getBirthdayFromSelects('new'),
     memo: document.getElementById('new-memo').value,
+    membership_plan: newPlanCustom || newPlanSelect,
+    is_new: true,
   };
   const result = await sbPost('customers', data);
   if (result) {
@@ -2705,6 +2755,7 @@ function showEditCustomerModal() {
   document.getElementById('edit-phone').value = currentCustomer.phone || '';
   setBirthdaySelects('edit', currentCustomer.birthday);
   document.getElementById('edit-memo').value = currentCustomer.memo || '';
+  document.getElementById('edit-is-new').checked = currentCustomer.is_new || false;
   // 契約コース
   const plan = currentCustomer.membership_plan || '';
   const planSelect = document.getElementById('edit-plan');
@@ -2736,6 +2787,7 @@ async function saveEditCustomer() {
     birthday: getBirthdayFromSelects('edit'),
     memo: document.getElementById('edit-memo').value,
     membership_plan: planCustom || planSelect,
+    is_new: document.getElementById('edit-is-new').checked,
   };
   const result = await sbPatch('customers', `id=eq.${currentCustomer.id}`, data);
   if (result) {
@@ -2800,6 +2852,18 @@ function esc(s) {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+function customerBadges(c) {
+  let html = '';
+  if (c.is_new) html += '<span class="badge-new">NEW</span>';
+  if (c.birthday) {
+    const bd = new Date(c.birthday);
+    if (bd.getMonth() + 1 === new Date().getMonth() + 1) {
+      html += '<span class="badge-birthday">誕生月🎉</span>';
+    }
+  }
+  return html;
 }
 
 // ==================================
