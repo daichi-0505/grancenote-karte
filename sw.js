@@ -1,6 +1,6 @@
 // カルテ Service Worker v4 — 絵文字→SVGアイコン
 // キャッシュなし（常にネットワーク取得）
-const CACHE_NAME = 'karte-v41';
+const CACHE_NAME = 'karte-v42';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {
