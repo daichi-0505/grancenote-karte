@@ -1629,26 +1629,19 @@ async function loadSchedule() {
   const dk = `${scheduleDate.getFullYear()}-${String(scheduleDate.getMonth()+1).padStart(2,'0')}-${String(scheduleDate.getDate()).padStart(2,'0')}`;
   document.getElementById('schedule-date-label').textContent = fmtScheduleDate(scheduleDate);
 
-  // 予約帳から当日の予約を取得（施術のみ）
-  const reservations = await sbGet('yoyaku_reservations',
-    `date=eq.${dk}&type=eq.treatment&order=start_time&select=id,name,menu,staff_id,start_time,end_time,customer_id`);
+  // 全APIを並列取得
+  const [reservations, karteRecords] = await Promise.all([
+    sbGet('yoyaku_reservations', `date=eq.${dk}&type=eq.treatment&order=start_time&select=id,name,menu,staff_id,start_time,end_time,customer_id`),
+    sbGet('karte_records', `date=eq.${dk}&select=customer_id,status`),
+  ]);
   scheduleData = reservations;
 
-  // 当日のカルテ記録を取得してステータスマップ構築
-  const karteRecords = await sbGet('karte_records', `date=eq.${dk}&select=customer_id,status`);
+  // カルテステータスマップ
   scheduleKarteMap = {};
   karteRecords.forEach(kr => {
     const prev = scheduleKarteMap[kr.customer_id];
     if (!prev || kr.status === 'complete') scheduleKarteMap[kr.customer_id] = kr.status || 'complete';
   });
-
-  // 予約に紐付く顧客情報を取得（バッジ表示用）
-  const cids = reservations.filter(r => r.customer_id).map(r => r.customer_id);
-  scheduleCustomerMap = {};
-  if (cids.length > 0) {
-    const custs = await sbGet('customers', `id=in.(${cids.join(',')})&select=id,birthday,is_new,membership_plan,default_duration`);
-    custs.forEach(c => { scheduleCustomerMap[c.id] = c; });
-  }
 
   // スタッフフィルタチップ
   const staffIds = [...new Set(reservations.map(r => r.staff_id).filter(Boolean))];
@@ -1658,7 +1651,17 @@ async function loadSchedule() {
       `<button class="staff-chip ${activeStaffFilter===sid?'active':''}" onclick="toggleStaffFilter('${sid}',this)">${staffName(sid)}</button>`
     ).join('');
 
+  // まず即座にリスト表示（バッジなし）
+  scheduleCustomerMap = {};
   renderScheduleList();
+
+  // 顧客情報を非同期で取得してバッジ更新
+  const cids = reservations.filter(r => r.customer_id).map(r => r.customer_id);
+  if (cids.length > 0) {
+    const custs = await sbGet('customers', `id=in.(${[...new Set(cids)].join(',')})&select=id,birthday,is_new,membership_plan,default_duration`);
+    custs.forEach(c => { scheduleCustomerMap[c.id] = c; });
+    renderScheduleList(); // バッジ付きで再描画
+  }
 }
 
 function renderScheduleList() {
