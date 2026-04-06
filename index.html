@@ -242,6 +242,11 @@ body {
 .badge-warn { background: var(--danger); }
 .badge-tag { background: var(--accent-40); }
 .plan-badge { display: inline-block; padding: 3px 10px; border-radius: 14px; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #C4A97D, #8B7355); letter-spacing: 0.5px; vertical-align: middle; margin-left: 6px; }
+.karte-status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+.karte-status-none { background: #F5E6E6; color: #C0392B; }
+.karte-status-draft { background: #FFF3E0; color: #E67E22; }
+.karte-status-done { background: #E8F5E9; color: #27AE60; }
+.monthly-visits { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: rgba(196,169,125,0.12); color: var(--accent-dark); margin-top: 4px; }
 
 /* ── フォーム ── */
 .form-group { margin-bottom: 16px; }
@@ -917,7 +922,8 @@ body {
     </div>
 
     <div style="margin-top:24px; display:flex; gap:12px;">
-      <button class="btn btn-primary btn-block" onclick="saveRecord()">保存</button>
+      <button class="btn btn-outline btn-block" onclick="saveRecord('draft')" style="flex:1;">途中保存</button>
+      <button class="btn btn-primary btn-block" onclick="saveRecord('complete')" style="flex:1;">完了</button>
     </div>
     <div id="record-edit-actions" style="margin-top:12px; display:none;">
       <button class="btn btn-danger btn-block btn-sm" onclick="deleteRecord()">この記録を削除</button>
@@ -1471,6 +1477,8 @@ function toggleScheduleExpand() {
   renderScheduleList();
 }
 
+let scheduleKarteMap = {}; // customer_id → karte status for schedule date
+
 async function loadSchedule() {
   const dk = `${scheduleDate.getFullYear()}-${String(scheduleDate.getMonth()+1).padStart(2,'0')}-${String(scheduleDate.getDate()).padStart(2,'0')}`;
   document.getElementById('schedule-date-label').textContent = fmtScheduleDate(scheduleDate);
@@ -1479,6 +1487,15 @@ async function loadSchedule() {
   const reservations = await sbGet('yoyaku_reservations',
     `date=eq.${dk}&type=eq.treatment&order=start_time&select=id,name,menu,staff_id,start_time,end_time,customer_id`);
   scheduleData = reservations;
+
+  // 当日のカルテ記録を取得してステータスマップ構築
+  const karteRecords = await sbGet('karte_records', `date=eq.${dk}&select=customer_id,status`);
+  scheduleKarteMap = {};
+  karteRecords.forEach(kr => {
+    const prev = scheduleKarteMap[kr.customer_id];
+    // 複数記録ある場合: completeが1つでもあればcomplete、なければdraft
+    if (!prev || kr.status === 'complete') scheduleKarteMap[kr.customer_id] = kr.status || 'complete';
+  });
 
   // スタッフフィルタチップ
   const staffIds = [...new Set(reservations.map(r => r.staff_id).filter(Boolean))];
@@ -1515,10 +1532,18 @@ function renderScheduleList() {
   list.innerHTML = visible.map(r => {
     const hasKarte = !!r.customer_id;
     const sName = staffName(r.staff_id);
+    // カルテステータス判定
+    let karteBadge = '';
+    if (hasKarte) {
+      const ks = scheduleKarteMap[r.customer_id];
+      if (ks === 'complete') karteBadge = '<span class="karte-status karte-status-done">記入済</span>';
+      else if (ks === 'draft') karteBadge = '<span class="karte-status karte-status-draft">記入途中</span>';
+      else karteBadge = '<span class="karte-status karte-status-none">未記入</span>';
+    }
     return `<div class="schedule-card ${hasKarte ? '' : 'no-karte'}" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : `quickRegister('${esc(r.name).replace(/'/g,"\\'")}','${r.id}')`}">
       <div class="schedule-time">${r.start_time}~</div>
       <div class="schedule-info">
-        <div class="schedule-name">${esc(r.name)}</div>
+        <div class="schedule-name">${esc(r.name)} ${karteBadge}</div>
         <div class="schedule-meta">${esc(r.menu || '')}${sName ? `<span class="schedule-staff">${sName}</span>` : ''}</div>
       </div>
       ${hasKarte ? CHEVRON : '<span class="schedule-unreg">+ 登録</span>'}
@@ -1591,7 +1616,21 @@ async function loadKarteScreen() {
   // サマリーカード
   document.getElementById('karte-avatar').textContent = c.name.charAt(0);
   document.getElementById('karte-summary-name').textContent = c.name;
-  document.getElementById('karte-plan-badge').innerHTML = c.membership_plan ? `<span class="plan-badge">${esc(c.membership_plan)}</span>` : '';
+  // プランバッジ＋月間残り回数
+  let planHtml = c.membership_plan ? `<span class="plan-badge">${esc(c.membership_plan)}</span>` : '';
+  if (c.membership_plan) {
+    const monthlyMax = c.membership_plan.includes('月2') ? 2 : c.membership_plan.includes('月1') ? 1 : 0;
+    if (monthlyMax > 0) {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const monthRecords = allRecords.filter(r => r.date && r.date.startsWith(ym) && r.status !== 'draft');
+      const used = monthRecords.length;
+      const remaining = Math.max(0, monthlyMax - used);
+      const color = remaining === 0 ? 'var(--success)' : remaining === monthlyMax ? 'var(--danger)' : 'var(--accent-dark)';
+      planHtml += ` <span class="monthly-visits" style="color:${color}">今月 ${used}/${monthlyMax}回${remaining > 0 ? `（残${remaining}回）` : '（消化済）'}</span>`;
+    }
+  }
+  document.getElementById('karte-plan-badge').innerHTML = planHtml;
   const infoParts = [];
   if (c.birthday) infoParts.push(fmtBirthday(c.birthday));
   if (c.phone) infoParts.push(formatPhone(c.phone));
@@ -1645,7 +1684,7 @@ async function loadKarteScreen() {
 
       return `<div class="record-card" onclick="viewRecord('${r.id}')">
         <div class="record-card-header">
-          <div class="record-card-date">${fmtDateFull(r.date)}</div>
+          <div class="record-card-date">${fmtDateFull(r.date)} ${r.status === 'draft' ? '<span class="karte-status karte-status-draft">記入途中</span>' : ''}</div>
           <div class="record-card-menu">${esc(r.menu || '(未入力)')}</div>
           ${CHEVRON}
         </div>
@@ -1681,7 +1720,7 @@ async function viewRecord(id) {
   const r = records[0];
 
   document.getElementById('rv-title').textContent = currentCustomer?.name || '施術カルテ';
-  document.getElementById('rv-date').textContent = fmtDateFull(r.date);
+  document.getElementById('rv-date').innerHTML = fmtDateFull(r.date) + (r.status === 'draft' ? ' <span class="karte-status karte-status-draft">記入途中</span>' : '');
   document.getElementById('rv-menu').textContent = r.menu || '(メニュー未入力)';
   document.getElementById('rv-duration').textContent = r.duration_min ? r.duration_min + '分' : '';
   document.getElementById('rv-duration').style.display = r.duration_min ? '' : 'none';
@@ -1782,9 +1821,9 @@ function editRecord(id) {
   showRecordForm(id);
 }
 
-async function saveRecord() {
+async function saveRecord(status) {
   if (isSaving) return;
-  showSaving('カルテを保存中...');
+  showSaving(status === 'draft' ? '途中保存中...' : 'カルテを保存中...');
   const data = {
     customer_id: currentCustomer.id,
     date: document.getElementById('rec-date').value || todayStr(),
@@ -1797,6 +1836,7 @@ async function saveRecord() {
     talk_memo: document.getElementById('rec-talk').value,
     staff_memo: document.getElementById('rec-staff-memo').value,
     next_visit_date: document.getElementById('rec-next').value || null,
+    status: status || 'complete',
   };
 
   let result;
