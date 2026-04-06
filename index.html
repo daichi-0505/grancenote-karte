@@ -820,6 +820,12 @@ body {
       <div id="rv-memo" style="font-size:15px; line-height:1.7; white-space:pre-wrap;"></div>
     </div>
 
+    <!-- 次回伝えること -->
+    <div class="card" id="rv-next-note-card" style="display:none; border-left-color:#C0392B; background:rgba(192,57,43,0.04);">
+      <div class="card-title" style="color:#C0392B;">次回伝えること・注意点</div>
+      <div id="rv-next-note" style="font-size:15px; line-height:1.7; white-space:pre-wrap; font-weight:600;"></div>
+    </div>
+
     <!-- 写真 -->
     <div class="card" id="rv-photos-card" style="display:none;">
       <div class="card-title">施術写真</div>
@@ -885,6 +891,10 @@ body {
     <div class="form-group">
       <label class="form-label">スタッフ間共有メモ</label>
       <textarea id="rec-staff-memo" class="form-textarea" placeholder="他のスタッフに共有したいこと"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="color:var(--danger);">次回伝えること・注意点</label>
+      <textarea id="rec-next-note" class="form-textarea" placeholder="次回来店時にお客様に伝えること、注意すること" style="border-color:rgba(192,57,43,0.3);"></textarea>
     </div>
     <div class="form-group">
       <label class="form-label">コース消化</label>
@@ -1197,6 +1207,24 @@ body {
 </div>
 
 <!-- ===== 写真拡大ビューア ===== -->
+<!-- ===== 朝の申し送りモーダル ===== -->
+<div id="morning-briefing" class="modal-overlay" style="z-index:2000;">
+  <div class="modal" style="max-height:80vh; overflow-y:auto;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <div class="modal-title" style="margin:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4A97D" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;margin-right:4px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        本日の申し送り
+      </div>
+      <button onclick="closeBriefing()" style="background:none;border:none;font-size:20px;color:var(--sub);cursor:pointer;">&times;</button>
+    </div>
+    <div id="briefing-content"></div>
+    <div style="margin-top:16px; display:flex; gap:10px;">
+      <button class="btn btn-outline btn-block" onclick="dismissBriefing()" style="flex:1;font-size:13px;">今日は表示しない</button>
+      <button class="btn btn-primary btn-block" onclick="closeBriefing()" style="flex:1;">確認しました</button>
+    </div>
+  </div>
+</div>
+
 <div id="photo-viewer" class="photo-viewer" onclick="if(event.target===this)this.classList.remove('show')">
   <button class="photo-viewer-close" onclick="document.getElementById('photo-viewer').classList.remove('show')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
   <img id="photo-viewer-img" src="">
@@ -1681,6 +1709,7 @@ async function loadKarteScreen() {
       if (r.treatment_flow) memoHtml += `<div><span style="font-weight:600;color:var(--accent);">流れ:</span> ${esc(r.treatment_flow)}</div>`;
       if (r.talk_memo) memoHtml += `<div><span style="font-weight:600;color:var(--accent-dark);">会話:</span> ${esc(r.talk_memo)}</div>`;
       if (r.staff_memo) memoHtml += `<div><span style="font-weight:600;color:var(--danger);">共有:</span> ${esc(r.staff_memo)}</div>`;
+      if (r.next_note) memoHtml += `<div><span style="font-weight:600;color:#C0392B;">次回:</span> ${esc(r.next_note)}</div>`;
 
       return `<div class="record-card" onclick="viewRecord('${r.id}')">
         <div class="record-card-header">
@@ -1747,6 +1776,11 @@ async function viewRecord(id) {
   if (r.staff_memo) { memoCard.style.display = ''; document.getElementById('rv-memo').textContent = r.staff_memo; }
   else memoCard.style.display = 'none';
 
+  // 次回伝えること
+  const nextNoteCard = document.getElementById('rv-next-note-card');
+  if (r.next_note) { nextNoteCard.style.display = ''; document.getElementById('rv-next-note').textContent = r.next_note; }
+  else nextNoteCard.style.display = 'none';
+
   // 次回予約
   const nextCard = document.getElementById('rv-next-card');
   if (r.next_visit_date) { nextCard.style.display = ''; document.getElementById('rv-next').textContent = fmtDateFull(r.next_visit_date); }
@@ -1785,6 +1819,7 @@ function showRecordForm(recordId) {
   document.getElementById('rec-treatment-flow').value = '';
   document.getElementById('rec-talk').value = '';
   document.getElementById('rec-staff-memo').value = '';
+  document.getElementById('rec-next-note').value = '';
   document.getElementById('rec-next').value = '';
   document.getElementById('record-edit-actions').style.display = 'none';
   pendingPhotos = [];
@@ -1813,6 +1848,7 @@ async function loadRecordForEdit(id) {
   document.getElementById('rec-treatment-flow').value = r.treatment_flow || '';
   document.getElementById('rec-talk').value = r.talk_memo || '';
   document.getElementById('rec-staff-memo').value = r.staff_memo || '';
+  document.getElementById('rec-next-note').value = r.next_note || '';
   document.getElementById('rec-next').value = r.next_visit_date || '';
   document.getElementById('record-edit-actions').style.display = '';
 }
@@ -1835,6 +1871,7 @@ async function saveRecord(status) {
     treatment_flow: document.getElementById('rec-treatment-flow').value,
     talk_memo: document.getElementById('rec-talk').value,
     staff_memo: document.getElementById('rec-staff-memo').value,
+    next_note: document.getElementById('rec-next-note').value,
     next_visit_date: document.getElementById('rec-next').value || null,
     status: status || 'complete',
   };
@@ -2764,6 +2801,174 @@ function esc(s) {
 }
 
 // ==================================
+// 朝の申し送りモーダル
+// ==================================
+function closeBriefing() {
+  document.getElementById('morning-briefing').classList.remove('show');
+}
+function dismissBriefing() {
+  localStorage.setItem('briefing_dismissed', todayStr());
+  closeBriefing();
+}
+
+async function showMorningBriefing() {
+  // 今日すでに非表示にしていたらスキップ
+  if (localStorage.getItem('briefing_dismissed') === todayStr()) return;
+
+  const today = todayStr();
+  const now = new Date();
+  const thisMonth = now.getMonth() + 1;
+  const thisYear = now.getFullYear();
+  const dayOfMonth = now.getDate();
+  const daysInMonth = new Date(thisYear, thisMonth, 0).getDate();
+  const remainingDays = daysInMonth - dayOfMonth;
+
+  // 本日の予約を取得
+  const todayRes = await sbGet('yoyaku_reservations',
+    `date=eq.${today}&type=eq.treatment&select=id,name,customer_id,menu,start_time`);
+
+  const alerts = [];
+
+  // ── 当日の注意事項 ──
+  const todayAlerts = [];
+
+  // 1. 誕生日のお客様
+  if (todayRes.length > 0) {
+    const customerIds = todayRes.filter(r => r.customer_id).map(r => r.customer_id);
+    if (customerIds.length > 0) {
+      const customers = await sbGet('customers', `id=in.(${customerIds.join(',')})&select=id,name,birthday`);
+      const birthdayCustomers = customers.filter(c => {
+        if (!c.birthday) return false;
+        const bd = new Date(c.birthday);
+        return bd.getMonth() + 1 === thisMonth && bd.getDate() === dayOfMonth;
+      });
+      birthdayCustomers.forEach(c => {
+        const res = todayRes.find(r => r.customer_id === c.id);
+        todayAlerts.push({
+          icon: '🎂',
+          title: `${c.name}さん お誕生日`,
+          detail: res ? `${res.start_time}〜 ${res.menu || ''}` : '',
+          color: '#E91E63'
+        });
+      });
+
+      // 2. 次回伝えることがあるお客様
+      for (const cid of customerIds) {
+        const lastRecords = await sbGet('karte_records',
+          `customer_id=eq.${cid}&next_note=neq.&order=date.desc&limit=1&select=next_note,date,customer_id`);
+        if (lastRecords.length > 0 && lastRecords[0].next_note) {
+          const cust = customers.find(c => c.id === cid);
+          const res = todayRes.find(r => r.customer_id === cid);
+          todayAlerts.push({
+            icon: '📋',
+            title: `${cust?.name || res?.name || '?'}さんに伝えること`,
+            detail: lastRecords[0].next_note,
+            color: '#C0392B'
+          });
+        }
+      }
+    }
+  }
+
+  // ── 要確認アラート（定額会員の来店状況） ──
+  const memberAlerts = [];
+  const ym = `${thisYear}-${String(thisMonth).padStart(2,'0')}`;
+
+  // 定額会員を取得
+  const members = await sbGet('customers', `membership_plan=neq.&select=id,name,membership_plan`);
+  if (members.length > 0) {
+    // 今月のカルテ記録を一括取得
+    const monthStart = `${ym}-01`;
+    const monthEnd = `${ym}-${String(daysInMonth).padStart(2,'0')}`;
+    const monthRecords = await sbGet('karte_records',
+      `date=gte.${monthStart}&date=lte.${monthEnd}&status=eq.complete&select=customer_id,date`);
+
+    // 今後の予約を確認
+    const futureRes = await sbGet('yoyaku_reservations',
+      `date=gte.${today}&date=lte.${monthEnd}&type=eq.treatment&select=customer_id,date`);
+
+    const visitCount = {};
+    monthRecords.forEach(r => {
+      visitCount[r.customer_id] = (visitCount[r.customer_id] || 0) + 1;
+    });
+
+    const futureBooking = {};
+    futureRes.forEach(r => {
+      if (r.customer_id) futureBooking[r.customer_id] = true;
+    });
+
+    for (const m of members) {
+      const max = m.membership_plan.includes('月2') ? 2 : m.membership_plan.includes('月1') ? 1 : 0;
+      if (max === 0) continue;
+      const visits = visitCount[m.id] || 0;
+      const remaining = max - visits;
+      if (remaining <= 0) continue; // 消化済みはOK
+
+      const hasBooking = futureBooking[m.id] || false;
+
+      // 月2: 2週間経過で0回来店（予約もなし）
+      if (max === 2 && dayOfMonth >= 15 && visits === 0 && !hasBooking) {
+        memberAlerts.push({
+          name: m.name,
+          plan: m.membership_plan,
+          detail: `月半ばで未来店（0/${max}回）・今後の予約なし`,
+          urgency: 'high'
+        });
+      }
+      // 月2: 残7日で1回しか来ていない（予約なし）
+      else if (max === 2 && remainingDays <= 7 && visits <= 1 && !hasBooking) {
+        memberAlerts.push({
+          name: m.name,
+          plan: m.membership_plan,
+          detail: `残${remainingDays}日で${visits}/${max}回・今後の予約なし`,
+          urgency: visits === 0 ? 'high' : 'medium'
+        });
+      }
+      // 月1: 残7日で未来店（予約なし）
+      else if (max === 1 && remainingDays <= 7 && visits === 0 && !hasBooking) {
+        memberAlerts.push({
+          name: m.name,
+          plan: m.membership_plan,
+          detail: `残${remainingDays}日で未来店・今後の予約なし`,
+          urgency: 'high'
+        });
+      }
+    }
+  }
+
+  // 何もなければ表示しない
+  if (todayAlerts.length === 0 && memberAlerts.length === 0) return;
+
+  // HTML構築
+  let html = '';
+
+  if (todayAlerts.length > 0) {
+    html += '<div style="font-size:13px;font-weight:700;color:var(--accent-dark);margin-bottom:8px;">本日の注意事項</div>';
+    todayAlerts.forEach(a => {
+      html += `<div class="card" style="border-left-color:${a.color};margin-bottom:8px;padding:10px 12px;">
+        <div style="font-size:14px;font-weight:700;">${a.icon} ${esc(a.title)}</div>
+        ${a.detail ? `<div style="font-size:13px;color:var(--sub);margin-top:2px;white-space:pre-wrap;">${esc(a.detail)}</div>` : ''}
+      </div>`;
+    });
+  }
+
+  if (memberAlerts.length > 0) {
+    html += '<div style="font-size:13px;font-weight:700;color:var(--accent-dark);margin:12px 0 8px;">要確認：定額会員の来店状況</div>';
+    memberAlerts.sort((a, b) => (a.urgency === 'high' ? 0 : 1) - (b.urgency === 'high' ? 0 : 1));
+    memberAlerts.forEach(a => {
+      const borderColor = a.urgency === 'high' ? '#C0392B' : '#E67E22';
+      html += `<div class="card" style="border-left-color:${borderColor};margin-bottom:6px;padding:8px 12px;">
+        <div style="font-size:13px;font-weight:700;">${esc(a.name)} <span style="font-size:11px;font-weight:400;color:var(--sub);">${esc(a.plan)}</span></div>
+        <div style="font-size:12px;color:${borderColor};margin-top:2px;">${esc(a.detail)}</div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('briefing-content').innerHTML = html;
+  document.getElementById('morning-briefing').classList.add('show');
+}
+
+// ==================================
 // 初期化
 // ==================================
 async function init() {
@@ -2791,6 +2996,9 @@ async function init() {
   const cid = params.get('customer_id');
   if (cid) {
     openKarte(cid);
+  } else {
+    // 直接アクセス時のみ朝の申し送りを表示
+    showMorningBriefing();
   }
 }
 
