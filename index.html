@@ -1612,7 +1612,9 @@ function renderScheduleList() {
     const custInfo = hasKarte ? scheduleCustomerMap[r.customer_id] : null;
     const custBadges = custInfo ? customerBadges(custInfo) : '';
     const badgeRow = (karteBadge || custBadges) ? `<div style="margin-bottom:2px;">${karteBadge}${custBadges}</div>` : '';
-    return `<div class="schedule-card ${hasKarte ? '' : 'no-karte'}" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : `quickRegister('${esc(r.name).replace(/'/g,"\\'")}','${r.id}')`}">
+    const isBirthMonth = custInfo && custInfo.birthday && new Date(custInfo.birthday).getMonth() + 1 === new Date().getMonth() + 1;
+    const bdStyle = isBirthMonth ? 'border-color:#E91E63;border-width:2px;background:rgba(233,30,99,0.03);' : '';
+    return `<div class="schedule-card ${hasKarte ? '' : 'no-karte'}" style="${bdStyle}" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : `quickRegister('${esc(r.name).replace(/'/g,"\\'")}','${r.id}')`}">
       <div class="schedule-time">${r.start_time}~</div>
       <div class="schedule-info">
         ${badgeRow}
