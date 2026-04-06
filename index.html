@@ -1348,7 +1348,7 @@ function buildSearchOr(q) {
 // ── 画面切り替え ──
 let screenHistory = ['search'];
 
-function showScreen(name, skipHistory) {
+function showScreen(name, skipHistory, skipReload) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + name).classList.add('active');
   if (!skipHistory && screenHistory[screenHistory.length - 1] !== name) {
@@ -1356,14 +1356,15 @@ function showScreen(name, skipHistory) {
   }
   if (name === 'search') loadSearchScreen();
   if (name === 'karte') loadKarteScreen();
-  if (name === 'segment') loadSegmentScreen();
+  if (name === 'segment' && !skipReload) loadSegmentScreen();
 }
 
 function goBack() {
   if (screenHistory.length > 1) {
     screenHistory.pop(); // 現在の画面を捨てる
     const prev = screenHistory[screenHistory.length - 1];
-    showScreen(prev, true); // 履歴に追加しない
+    // 戻る時は前画面の状態を保持（リロードしない）
+    showScreen(prev, true, true);
   } else {
     showScreen('search', true);
   }
