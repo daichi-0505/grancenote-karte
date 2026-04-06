@@ -1644,6 +1644,11 @@ async function loadKarteScreen() {
   // サマリーカード
   document.getElementById('karte-avatar').textContent = c.name.charAt(0);
   document.getElementById('karte-summary-name').textContent = c.name;
+
+  // 来店回数を取得（HP移行分 + カルテ記録）— プランバッジで使うため先に取得
+  const allRecords = await sbGet('karte_records',
+    `customer_id=eq.${c.id}&order=date.desc,created_at.desc&limit=50`);
+
   // プランバッジ＋月間残り回数
   let planHtml = c.membership_plan ? `<span class="plan-badge">${esc(c.membership_plan)}</span>` : '';
   if (c.membership_plan) {
@@ -1662,10 +1667,6 @@ async function loadKarteScreen() {
   const infoParts = [];
   if (c.birthday) infoParts.push(fmtBirthday(c.birthday));
   if (c.phone) infoParts.push(formatPhone(c.phone));
-
-  // 来店回数を取得（HP移行分 + カルテ記録）
-  const allRecords = await sbGet('karte_records',
-    `customer_id=eq.${c.id}&order=date.desc,created_at.desc&limit=50`);
   const hpCount = c.hp_visit_count || 0;
   const karteCount = allRecords.length;
   const totalVisits = hpCount + karteCount;
