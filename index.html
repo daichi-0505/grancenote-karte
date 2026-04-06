@@ -713,6 +713,11 @@ body {
         <div class="menu-label">新規顧客登録</div>
         <div class="menu-sub">お客様を新しく追加</div>
       </div>
+      <div class="menu-card" onclick="showProductManager()">
+        <div class="menu-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg></div>
+        <div class="menu-label">商品管理</div>
+        <div class="menu-sub">商品マスタの追加・編集</div>
+      </div>
     </div>
   </div>
 
@@ -1217,9 +1222,10 @@ body {
 <div id="modal-add-purchase" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
     <div class="modal-title">商品購入記録</div>
-    <div class="form-group">
+    <div class="form-group" style="position:relative;">
       <label class="form-label">商品名 <span class="required">必須</span></label>
-      <input id="purchase-product" type="text" class="form-input" placeholder="クレンジング、美容液等">
+      <input id="purchase-product" type="text" class="form-input" placeholder="商品名を入力して検索..." autocomplete="off">
+      <div id="product-suggest" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--border);border-radius:0 0 10px 10px;max-height:200px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
     </div>
     <div style="display:flex; gap:12px;">
       <div class="form-group" style="flex:1;">
@@ -1246,6 +1252,51 @@ body {
       <button class="btn btn-outline" onclick="closeModal('modal-add-purchase')">キャンセル</button>
       <button class="btn btn-primary" onclick="savePurchase()">登録</button>
     </div>
+    <div style="text-align:center;margin-top:8px;">
+      <a href="#" onclick="event.preventDefault();closeModal('modal-add-purchase');showProductManager()" style="font-size:12px;color:var(--sub);">商品マスタを管理</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 商品マスタ管理モーダル ===== -->
+<div id="modal-product-manager" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="max-height:85vh;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="modal-title" style="margin:0;">商品マスタ管理</div>
+      <button onclick="closeModal('modal-product-manager')" style="background:none;border:none;font-size:20px;color:var(--sub);cursor:pointer;">&times;</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input id="pm-search" type="text" class="form-input" placeholder="商品名で検索..." style="flex:1;" oninput="filterProductList()">
+      <button class="btn btn-primary btn-sm" onclick="showAddProductForm()" style="white-space:nowrap;padding:8px 14px;">+ 追加</button>
+    </div>
+    <div id="pm-add-form" style="display:none;background:var(--bg);padding:12px;border-radius:10px;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">新規商品追加</div>
+      <input id="pm-new-name" type="text" class="form-input" placeholder="商品名" style="margin-bottom:6px;">
+      <div style="display:flex;gap:8px;margin-bottom:6px;">
+        <input id="pm-new-price" type="number" class="form-input" placeholder="価格（税込）" style="flex:1;">
+        <select id="pm-new-category" class="form-select" style="flex:1;">
+          <option value="スキンケア">スキンケア</option>
+          <option value="ADS">ADS</option>
+          <option value="Diva">Diva</option>
+          <option value="パック・マスク">パック・マスク</option>
+          <option value="日焼け止め">日焼け止め</option>
+          <option value="ボディ・ヘアケア">ボディ・ヘアケア</option>
+          <option value="メイクアップ">メイクアップ</option>
+          <option value="サプリメント">サプリメント</option>
+          <option value="まつ毛">まつ毛</option>
+          <option value="ダイエット">ダイエット</option>
+          <option value="生活雑貨">生活雑貨</option>
+          <option value="エステ用品">エステ用品</option>
+          <option value="美容機器">美容機器</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('pm-add-form').style.display='none'" style="flex:1;">キャンセル</button>
+        <button class="btn btn-primary btn-sm" onclick="saveNewProduct()" style="flex:1;">追加</button>
+      </div>
+    </div>
+    <div id="pm-list" style="max-height:50vh;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -2356,6 +2407,122 @@ async function savePurchase() {
   } else {
     alert('登録に失敗しました');
   }
+}
+
+// ── 商品マスタ検索オートコンプリート ──
+let productSearchTimeout = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('purchase-product');
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    clearTimeout(productSearchTimeout);
+    const q = this.value.trim();
+    const suggest = document.getElementById('product-suggest');
+    if (q.length < 1) { suggest.style.display = 'none'; return; }
+    productSearchTimeout = setTimeout(async () => {
+      const results = await sbGet('product_master', `name=ilike.*${encodeURIComponent(q)}*&order=category,name&limit=12`);
+      if (results.length === 0) { suggest.style.display = 'none'; return; }
+      suggest.innerHTML = results.map(p =>
+        `<div style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:14px;" onmousedown="selectProduct('${esc(p.name).replace(/'/g,"\\'")}',${p.price || 0})">
+          <div style="font-weight:600;">${esc(p.name)}</div>
+          <div style="font-size:12px;color:var(--sub);">${p.category || ''} / ¥${(p.price||0).toLocaleString()}</div>
+        </div>`
+      ).join('');
+      suggest.style.display = 'block';
+    }, 200);
+  });
+  inp.addEventListener('blur', () => {
+    setTimeout(() => { document.getElementById('product-suggest').style.display = 'none'; }, 200);
+  });
+});
+
+function selectProduct(name, price) {
+  document.getElementById('purchase-product').value = name;
+  document.getElementById('purchase-price').value = price || '';
+  document.getElementById('product-suggest').style.display = 'none';
+}
+
+// ── 商品マスタ管理 ──
+let allProducts = [];
+
+async function showProductManager() {
+  allProducts = await sbGet('product_master', 'order=category,name&limit=500');
+  document.getElementById('pm-search').value = '';
+  document.getElementById('pm-add-form').style.display = 'none';
+  filterProductList();
+  document.getElementById('modal-product-manager').classList.add('show');
+}
+
+function filterProductList() {
+  const q = (document.getElementById('pm-search').value || '').trim().toLowerCase();
+  const filtered = q ? allProducts.filter(p => p.name.toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q)) : allProducts;
+  const list = document.getElementById('pm-list');
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--sub);padding:20px;">商品が見つかりません</div>';
+    return;
+  }
+  let currentCat = '';
+  list.innerHTML = filtered.map(p => {
+    let catHeader = '';
+    if (p.category !== currentCat) {
+      currentCat = p.category;
+      catHeader = `<div style="font-size:11px;font-weight:700;color:var(--accent);padding:10px 0 4px;border-bottom:1px solid var(--border);">${esc(p.category || 'その他')}</div>`;
+    }
+    return catHeader + `<div style="display:flex;align-items:center;padding:8px 4px;border-bottom:1px solid #f5f5f5;gap:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.name)}</div>
+        <div style="font-size:12px;color:var(--sub);">¥${(p.price||0).toLocaleString()}</div>
+      </div>
+      <button onclick="editProduct('${p.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--sub);">編集</button>
+      <button onclick="deleteProduct('${p.id}','${esc(p.name).replace(/'/g,"\\'")}')" style="background:none;border:1px solid #fdd;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--danger);">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function showAddProductForm() {
+  document.getElementById('pm-add-form').style.display = '';
+  document.getElementById('pm-new-name').value = '';
+  document.getElementById('pm-new-price').value = '';
+  document.getElementById('pm-new-category').value = 'スキンケア';
+  document.getElementById('pm-new-name').focus();
+}
+
+async function saveNewProduct() {
+  const name = document.getElementById('pm-new-name').value.trim();
+  if (!name) { alert('商品名を入力してください'); return; }
+  const data = {
+    name,
+    price: parseInt(document.getElementById('pm-new-price').value) || null,
+    category: document.getElementById('pm-new-category').value
+  };
+  const result = await sbPost('product_master', data);
+  if (result) {
+    document.getElementById('pm-add-form').style.display = 'none';
+    allProducts.push(result);
+    allProducts.sort((a, b) => (a.category||'').localeCompare(b.category||'') || a.name.localeCompare(b.name));
+    filterProductList();
+  }
+}
+
+async function deleteProduct(id, name) {
+  if (!confirm(`「${name}」を商品マスタから削除しますか？`)) return;
+  await sbDelete('product_master', `id=eq.${id}`);
+  allProducts = allProducts.filter(p => p.id !== id);
+  filterProductList();
+}
+
+async function editProduct(id) {
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  const newName = prompt('商品名', p.name);
+  if (newName === null) return;
+  const newPrice = prompt('価格（税込）', p.price || '');
+  if (newPrice === null) return;
+  const data = { name: newName.trim() || p.name, price: parseInt(newPrice) || p.price };
+  await sbPatch('product_master', `id=eq.${id}`, data);
+  p.name = data.name;
+  p.price = data.price;
+  filterProductList();
 }
 
 // 購入タブの読み込み
