@@ -992,6 +992,11 @@ body {
       <input id="new-plan-custom" type="text" class="form-input" placeholder="上記にない場合はここに入力" style="font-size:13px;margin-top:4px;">
     </div>
     <div class="form-group">
+      <label class="form-label">施術時間（分）</label>
+      <input id="new-duration" type="number" class="form-input" value="60" placeholder="60" style="width:100px;">
+      <span style="font-size:12px;color:var(--sub);margin-left:4px;">コース選択で自動設定</span>
+    </div>
+    <div class="form-group">
       <label class="form-label">メモ</label>
       <textarea id="new-memo" class="form-textarea" placeholder="スタッフ共有メモ（付箋の代わり）"></textarea>
     </div>
@@ -1051,6 +1056,10 @@ body {
       <div style="margin-top:4px;">
         <input id="edit-plan-custom" type="text" class="form-input" placeholder="上記にない場合はここに入力" style="font-size:13px;">
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">施術時間（分）</label>
+      <input id="edit-duration" type="number" class="form-input" placeholder="60" style="width:100px;">
     </div>
     <div class="form-group">
       <label class="form-label">メモ</label>
@@ -1562,7 +1571,7 @@ async function loadSchedule() {
   const cids = reservations.filter(r => r.customer_id).map(r => r.customer_id);
   scheduleCustomerMap = {};
   if (cids.length > 0) {
-    const custs = await sbGet('customers', `id=in.(${cids.join(',')})&select=id,birthday,is_new,membership_plan`);
+    const custs = await sbGet('customers', `id=in.(${cids.join(',')})&select=id,birthday,is_new,membership_plan,default_duration`);
     custs.forEach(c => { scheduleCustomerMap[c.id] = c; });
   }
 
@@ -1710,6 +1719,7 @@ async function loadKarteScreen() {
       planHtml += ` <span class="monthly-visits" style="color:${color}">今月 ${used}/${monthlyMax}回${remaining > 0 ? `（残${remaining}回）` : '（消化済）'}</span>`;
     }
   }
+  if (c.default_duration) planHtml += ` <span class="monthly-visits">${c.default_duration}分</span>`;
   document.getElementById('karte-plan-badge').innerHTML = planHtml;
   const infoParts = [];
   if (c.birthday) infoParts.push(fmtBirthday(c.birthday));
@@ -2703,7 +2713,9 @@ function showNewCustomerModal() {
   setBirthdaySelects('new', null);
   document.getElementById('new-plan').value = '';
   document.getElementById('new-plan-custom').value = '';
+  document.getElementById('new-duration').value = 60;
   document.getElementById('new-memo').value = '';
+  document.getElementById('new-plan').onchange = function() { document.getElementById('new-duration').value = planToDuration(this.value); };
   document.getElementById('modal-new-customer').classList.add('show');
 }
 
@@ -2716,7 +2728,9 @@ function quickRegister(name, reservationId) {
   setBirthdaySelects('new', null);
   document.getElementById('new-plan').value = '';
   document.getElementById('new-plan-custom').value = '';
+  document.getElementById('new-duration').value = 60;
   document.getElementById('new-memo').value = '';
+  document.getElementById('new-plan').onchange = function() { document.getElementById('new-duration').value = planToDuration(this.value); };
   document.getElementById('modal-new-customer').classList.add('show');
 }
 
@@ -2735,6 +2749,7 @@ async function saveNewCustomer() {
     birthday: getBirthdayFromSelects('new'),
     memo: document.getElementById('new-memo').value,
     membership_plan: newPlanCustom || newPlanSelect,
+    default_duration: parseInt(document.getElementById('new-duration').value) || 60,
     is_new: true,
   };
   const result = await sbPost('customers', data);
@@ -2765,6 +2780,8 @@ function showEditCustomerModal() {
   setBirthdaySelects('edit', currentCustomer.birthday);
   document.getElementById('edit-memo').value = currentCustomer.memo || '';
   document.getElementById('edit-is-new').checked = currentCustomer.is_new || false;
+  document.getElementById('edit-duration').value = currentCustomer.default_duration || 60;
+  document.getElementById('edit-plan').onchange = function() { document.getElementById('edit-duration').value = planToDuration(this.value); };
   // 契約コース
   const plan = currentCustomer.membership_plan || '';
   const planSelect = document.getElementById('edit-plan');
@@ -2796,6 +2813,7 @@ async function saveEditCustomer() {
     birthday: getBirthdayFromSelects('edit'),
     memo: document.getElementById('edit-memo').value,
     membership_plan: planCustom || planSelect,
+    default_duration: parseInt(document.getElementById('edit-duration').value) || 60,
     is_new: document.getElementById('edit-is-new').checked,
   };
   const result = await sbPatch('customers', `id=eq.${currentCustomer.id}`, data);
@@ -2861,6 +2879,15 @@ function esc(s) {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+function planToDuration(plan) {
+  if (!plan) return 60;
+  if (plan.includes('ゴールド')) return 45;
+  if (plan.includes('プラチナ')) return 60;
+  if (plan.includes('ダイヤ')) return 70;
+  if (plan.includes('ヒゲ脱毛')) return 60;
+  return 60;
 }
 
 function customerBadges(c) {
