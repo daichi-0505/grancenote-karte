@@ -241,6 +241,7 @@ body {
 .badge-accent { background: var(--accent); }
 .badge-warn { background: var(--danger); }
 .badge-tag { background: var(--accent-40); }
+.plan-badge { display: inline-block; padding: 3px 10px; border-radius: 14px; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #C4A97D, #8B7355); letter-spacing: 0.5px; vertical-align: middle; margin-left: 6px; }
 
 /* ── フォーム ── */
 .form-group { margin-bottom: 16px; }
@@ -703,6 +704,7 @@ body {
       <div class="avatar" id="karte-avatar" style="width:52px;height:52px;border-radius:26px;font-size:20px;"></div>
       <div style="flex:1;">
         <div style="font-size:18px; font-weight:700;" id="karte-summary-name"></div>
+        <div id="karte-plan-badge" style="margin:2px 0 4px;"></div>
         <div style="font-size:14px; color:var(--sub);" id="karte-summary-info"></div>
       </div>
     </div>
@@ -795,6 +797,12 @@ body {
       <div id="rv-skin" style="font-size:15px; line-height:1.7; white-space:pre-wrap;"></div>
     </div>
 
+    <!-- 施術の流れ -->
+    <div class="card" id="rv-flow-card" style="display:none; border-left-color:#C4A97D;">
+      <div class="card-title">施術の流れ</div>
+      <div id="rv-flow" style="font-size:15px; line-height:1.7; white-space:pre-wrap;"></div>
+    </div>
+
     <!-- 会話メモ -->
     <div class="card" id="rv-talk-card" style="display:none; border-left-color:#D4C5A0;">
       <div class="card-title">会話メモ</div>
@@ -860,6 +868,10 @@ body {
     <div class="form-group">
       <label class="form-label">お肌の状態</label>
       <textarea id="rec-skin" class="form-textarea" placeholder="お肌の状態・所見を記入"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">施術の流れ</label>
+      <textarea id="rec-treatment-flow" class="form-textarea" placeholder="クレンジング→吸引→導入→パック等"></textarea>
     </div>
     <div class="form-group">
       <label class="form-label">話した内容</label>
@@ -973,6 +985,32 @@ body {
       </div>
     </div>
     <div class="form-group">
+      <label class="form-label">契約コース</label>
+      <select id="edit-plan" class="form-select">
+        <option value="">なし</option>
+        <optgroup label="定額コース">
+          <option value="月1ゴールド">月1ゴールド</option>
+          <option value="月1プラチナ">月1プラチナ</option>
+          <option value="月1ダイヤ">月1ダイヤ</option>
+          <option value="月2ゴールド">月2ゴールド</option>
+          <option value="月2プラチナ">月2プラチナ</option>
+          <option value="月2ダイヤ">月2ダイヤ</option>
+        </optgroup>
+        <optgroup label="ヒゲ脱毛">
+          <option value="月1ヒゲ脱毛">月1ヒゲ脱毛</option>
+          <option value="月2ヒゲ脱毛">月2ヒゲ脱毛</option>
+        </optgroup>
+        <optgroup label="回数券">
+          <option value="回数券10回">回数券10回</option>
+          <option value="回数券20回">回数券20回</option>
+          <option value="回数券30回">回数券30回</option>
+        </optgroup>
+      </select>
+      <div style="margin-top:4px;">
+        <input id="edit-plan-custom" type="text" class="form-input" placeholder="上記にない場合はここに入力" style="font-size:13px;">
+      </div>
+    </div>
+    <div class="form-group">
       <label class="form-label">メモ</label>
       <textarea id="edit-memo" class="form-textarea"></textarea>
     </div>
@@ -1004,6 +1042,7 @@ body {
         <button class="staff-chip" data-preset="birthday" onclick="togglePreset(this)">今月が誕生日</button>
         <button class="staff-chip" data-preset="dormant" onclick="togglePreset(this)">3ヶ月以上来ていない</button>
         <button class="staff-chip" data-preset="course_low" onclick="togglePreset(this)">コース残り1回以下</button>
+        <button class="staff-chip" data-preset="teigaku" onclick="togglePreset(this)">定額会員</button>
       </div>
 
       <div style="font-size:14px;font-weight:600;color:var(--label);margin-bottom:8px;">詳細条件</div>
@@ -1552,6 +1591,7 @@ async function loadKarteScreen() {
   // サマリーカード
   document.getElementById('karte-avatar').textContent = c.name.charAt(0);
   document.getElementById('karte-summary-name').textContent = c.name;
+  document.getElementById('karte-plan-badge').innerHTML = c.membership_plan ? `<span class="plan-badge">${esc(c.membership_plan)}</span>` : '';
   const infoParts = [];
   if (c.birthday) infoParts.push(fmtBirthday(c.birthday));
   if (c.phone) infoParts.push(formatPhone(c.phone));
@@ -1599,6 +1639,7 @@ async function loadKarteScreen() {
 
       let memoHtml = '';
       if (r.skin_condition) memoHtml += `<div><span style="font-weight:600;color:var(--accent-dark);">肌:</span> ${esc(r.skin_condition)}</div>`;
+      if (r.treatment_flow) memoHtml += `<div><span style="font-weight:600;color:var(--accent);">流れ:</span> ${esc(r.treatment_flow)}</div>`;
       if (r.talk_memo) memoHtml += `<div><span style="font-weight:600;color:var(--accent-dark);">会話:</span> ${esc(r.talk_memo)}</div>`;
       if (r.staff_memo) memoHtml += `<div><span style="font-weight:600;color:var(--danger);">共有:</span> ${esc(r.staff_memo)}</div>`;
 
@@ -1652,6 +1693,11 @@ async function viewRecord(id) {
   if (r.skin_condition) { skinCard.style.display = ''; document.getElementById('rv-skin').textContent = r.skin_condition; }
   else skinCard.style.display = 'none';
 
+  // 施術の流れ
+  const flowCard = document.getElementById('rv-flow-card');
+  if (r.treatment_flow) { flowCard.style.display = ''; document.getElementById('rv-flow').textContent = r.treatment_flow; }
+  else flowCard.style.display = 'none';
+
   // 会話メモ
   const talkCard = document.getElementById('rv-talk-card');
   if (r.talk_memo) { talkCard.style.display = ''; document.getElementById('rv-talk').textContent = r.talk_memo; }
@@ -1697,6 +1743,7 @@ function showRecordForm(recordId) {
   document.getElementById('rec-staff').value = '';
   document.getElementById('rec-room').value = '';
   document.getElementById('rec-skin').value = '';
+  document.getElementById('rec-treatment-flow').value = '';
   document.getElementById('rec-talk').value = '';
   document.getElementById('rec-staff-memo').value = '';
   document.getElementById('rec-next').value = '';
@@ -1724,6 +1771,7 @@ async function loadRecordForEdit(id) {
   document.getElementById('rec-staff').value = r.staff_id || '';
   document.getElementById('rec-room').value = r.room_id || '';
   document.getElementById('rec-skin').value = r.skin_condition || '';
+  document.getElementById('rec-treatment-flow').value = r.treatment_flow || '';
   document.getElementById('rec-talk').value = r.talk_memo || '';
   document.getElementById('rec-staff-memo').value = r.staff_memo || '';
   document.getElementById('rec-next').value = r.next_visit_date || '';
@@ -1745,6 +1793,7 @@ async function saveRecord() {
     staff_id: document.getElementById('rec-staff').value || null,
     room_id: document.getElementById('rec-room').value || null,
     skin_condition: document.getElementById('rec-skin').value,
+    treatment_flow: document.getElementById('rec-treatment-flow').value,
     talk_memo: document.getElementById('rec-talk').value,
     staff_memo: document.getElementById('rec-staff-memo').value,
     next_visit_date: document.getElementById('rec-next').value || null,
@@ -2245,13 +2294,14 @@ tr:nth-child(even) { background: #fafafa; }
     });
     html += '</div>';
   }
-  html += `<table><thead><tr><th>日付</th><th>メニュー</th><th>時間</th><th>肌状態</th><th>購入商品</th><th>担当</th></tr></thead><tbody>`;
+  html += `<table><thead><tr><th>日付</th><th>メニュー</th><th>時間</th><th>肌状態</th><th>施術の流れ</th><th>共有メモ</th><th>担当</th></tr></thead><tbody>`;
   records.forEach(r => {
     html += `<tr>
       <td>${fmtDateFull(r.date)}</td>
       <td>${r.menu || ''}</td>
       <td>${r.duration_min ? r.duration_min+'分' : ''}</td>
       <td>${r.skin_condition || ''}</td>
+      <td>${r.treatment_flow || ''}</td>
       <td>${r.staff_memo || ''}</td>
       <td>${staffName(r.staff_id)}</td>
     </tr>`;
@@ -2364,6 +2414,9 @@ async function runCombinedFilter() {
     if (activePresets.has('course_low')) {
       if (!lowCourseCustomers.has(c.id)) return false;
     }
+    if (activePresets.has('teigaku')) {
+      if (!c.membership_plan) return false;
+    }
 
     // 詳細条件
     const bMonth = document.getElementById('seg-birthday-month')?.value;
@@ -2441,7 +2494,7 @@ function renderSegmentResults() {
     <div class="list-item-card" onclick="openKarte('${c.id}')">
       <div class="avatar">${esc(c.name).charAt(0)}</div>
       <div style="flex:1;">
-        <div class="list-name">${esc(c.name)}</div>
+        <div class="list-name">${esc(c.name)}${c.membership_plan ? `<span class="plan-badge" style="font-size:10px;padding:2px 7px;margin-left:6px;">${esc(c.membership_plan)}</span>` : ''}</div>
         <div class="list-sub">${c._lastVisit ? '最終:'+fmtDateFull(c._lastVisit) : (c.hp_last_visit ? '最終:'+fmtDateFull(c.hp_last_visit) : '')}${(c._visitCount + (c.hp_visit_count||0)) ? ' / '+(c._visitCount + (c.hp_visit_count||0))+'回' : ''}${c.phone ? ' / '+formatPhone(c.phone) : ''}</div>
       </div>
       ${CHEVRON}
@@ -2573,6 +2626,19 @@ function showEditCustomerModal() {
   document.getElementById('edit-phone').value = currentCustomer.phone || '';
   setBirthdaySelects('edit', currentCustomer.birthday);
   document.getElementById('edit-memo').value = currentCustomer.memo || '';
+  // 契約コース
+  const plan = currentCustomer.membership_plan || '';
+  const planSelect = document.getElementById('edit-plan');
+  const planCustom = document.getElementById('edit-plan-custom');
+  // セレクト���存在するか確認
+  const optionExists = Array.from(planSelect.options).some(o => o.value === plan);
+  if (optionExists) {
+    planSelect.value = plan;
+    planCustom.value = '';
+  } else {
+    planSelect.value = '';
+    planCustom.value = plan;
+  }
   document.getElementById('modal-edit-customer').classList.add('show');
 }
 
@@ -2582,12 +2648,15 @@ async function saveEditCustomer() {
   if (!name) { alert('名前を入力してください'); return; }
   showSaving('保存中...');
   const phone = normalizePhone(document.getElementById('edit-phone').value);
+  const planSelect = document.getElementById('edit-plan').value;
+  const planCustom = document.getElementById('edit-plan-custom').value.trim();
   const data = {
     name,
     name_kana: document.getElementById('edit-kana').value.trim(),
     phone,
     birthday: getBirthdayFromSelects('edit'),
     memo: document.getElementById('edit-memo').value,
+    membership_plan: planCustom || planSelect,
   };
   const result = await sbPatch('customers', `id=eq.${currentCustomer.id}`, data);
   if (result) {
