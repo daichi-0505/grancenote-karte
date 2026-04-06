@@ -945,6 +945,14 @@ body {
       <textarea id="rec-next-note" class="form-textarea" placeholder="次回来店時にお客様に伝えること、注意すること" style="border-color:rgba(192,57,43,0.3);"></textarea>
     </div>
     <div class="form-group">
+      <label class="form-label">購入商品</label>
+      <div id="rec-purchased-items"></div>
+      <div style="position:relative;">
+        <input id="rec-product-search" type="text" class="form-input" placeholder="商品名を入力して検索・追加..." autocomplete="off" style="margin-top:4px;">
+        <div id="rec-product-suggest" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--border);border-radius:0 0 10px 10px;max-height:180px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+      </div>
+    </div>
+    <div class="form-group">
       <label class="form-label">コース消化</label>
       <select id="rec-course" class="form-select">
         <option value="">消化なし</option>
@@ -2008,6 +2016,9 @@ function showRecordForm(recordId) {
   document.getElementById('rec-staff-memo').value = '';
   document.getElementById('rec-next-note').value = '';
   document.getElementById('rec-next').value = '';
+  recPurchasedItems = [];
+  renderRecPurchasedItems();
+  document.getElementById('rec-product-search').value = '';
   document.getElementById('record-edit-actions').style.display = 'none';
   pendingPhotos = [];
   renderPhotoPreviews();
@@ -2074,6 +2085,20 @@ async function saveRecord(status) {
     // 写真があればアップロード
     if (pendingPhotos.length > 0) {
       await uploadPendingPhotos(result.id, currentCustomer.id);
+    }
+    // 購入商品を保存
+    if (recPurchasedItems.length > 0 && !editingRecordId) {
+      for (const item of recPurchasedItems) {
+        await sbPost('karte_purchases', {
+          customer_id: currentCustomer.id,
+          product_name: item.name,
+          price: item.price || null,
+          purchased_at: data.date,
+          source: 'store',
+          estimated_days: 60,
+          auto_imported: false
+        });
+      }
     }
     // コース消化
     const courseId = document.getElementById('rec-course').value;
@@ -2409,7 +2434,65 @@ async function savePurchase() {
   }
 }
 
-// ── 商品マスタ検索オートコンプリート ──
+// ── 施術記録内の購入商品 ──
+let recPurchasedItems = []; // [{name, price}]
+
+function renderRecPurchasedItems() {
+  const box = document.getElementById('rec-purchased-items');
+  box.innerHTML = recPurchasedItems.map((item, i) => `
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--bg);border-radius:8px;margin-bottom:4px;">
+      <div style="flex:1;font-size:13px;font-weight:600;">${esc(item.name)}</div>
+      <div style="font-size:12px;color:var(--sub);">¥${(item.price||0).toLocaleString()}</div>
+      <button onclick="recPurchasedItems.splice(${i},1);renderRecPurchasedItems()" style="background:none;border:none;color:var(--danger);font-size:16px;cursor:pointer;padding:0 4px;">&times;</button>
+    </div>
+  `).join('');
+}
+
+function addRecPurchasedItem(name, price) {
+  recPurchasedItems.push({ name, price });
+  renderRecPurchasedItems();
+  document.getElementById('rec-product-search').value = '';
+  document.getElementById('rec-product-suggest').style.display = 'none';
+}
+
+// ひらがな⇔カタカナ変換
+function toKatakana(s) { return s.replace(/[\u3041-\u3096]/g, c => String.fromCharCode(c.charCodeAt(0) + 96)); }
+function toHiragana(s) { return s.replace(/[\u30A1-\u30F6]/g, c => String.fromCharCode(c.charCodeAt(0) - 96)); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const recSearch = document.getElementById('rec-product-search');
+  if (!recSearch) return;
+  let recProdTimeout = null;
+  recSearch.addEventListener('input', function() {
+    clearTimeout(recProdTimeout);
+    const q = this.value.trim();
+    const suggest = document.getElementById('rec-product-suggest');
+    if (q.length < 1) { suggest.style.display = 'none'; return; }
+    recProdTimeout = setTimeout(async () => {
+      const kata = encodeURIComponent(toKatakana(q));
+      const hira = encodeURIComponent(toHiragana(q));
+      const orig = encodeURIComponent(q);
+      const results = await sbGet('product_master', `or=(name.ilike.*${orig}*,name.ilike.*${kata}*,name.ilike.*${hira}*)&order=category,name&limit=12`);
+      if (results.length === 0) {
+        suggest.innerHTML = `<div style="padding:10px 12px;cursor:pointer;font-size:13px;color:var(--accent);" onmousedown="addRecPurchasedItem('${esc(q).replace(/'/g,"\\'")}',0)">「${esc(q)}」をそのまま追加</div>`;
+        suggest.style.display = 'block';
+        return;
+      }
+      suggest.innerHTML = results.map(p =>
+        `<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;" onmousedown="addRecPurchasedItem('${esc(p.name).replace(/'/g,"\\'")}',${p.price||0})">
+          <span style="font-weight:600;">${esc(p.name)}</span>
+          <span style="color:var(--sub);font-size:11px;margin-left:6px;">¥${(p.price||0).toLocaleString()}</span>
+        </div>`
+      ).join('') + `<div style="padding:8px 12px;cursor:pointer;font-size:12px;color:var(--accent);border-top:1px solid #eee;" onmousedown="addRecPurchasedItem('${esc(q).replace(/'/g,"\\'")}',0)">「${esc(q)}」をそのまま追加</div>`;
+      suggest.style.display = 'block';
+    }, 200);
+  });
+  recSearch.addEventListener('blur', () => {
+    setTimeout(() => { document.getElementById('rec-product-suggest').style.display = 'none'; }, 200);
+  });
+});
+
+// ── 商品マスタ検索オートコンプリート（購入記録モーダル用） ──
 let productSearchTimeout = null;
 document.addEventListener('DOMContentLoaded', () => {
   const inp = document.getElementById('purchase-product');
@@ -2420,7 +2503,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggest = document.getElementById('product-suggest');
     if (q.length < 1) { suggest.style.display = 'none'; return; }
     productSearchTimeout = setTimeout(async () => {
-      const results = await sbGet('product_master', `name=ilike.*${encodeURIComponent(q)}*&order=category,name&limit=12`);
+      const kata = encodeURIComponent(toKatakana(q));
+      const hira = encodeURIComponent(toHiragana(q));
+      const orig = encodeURIComponent(q);
+      const results = await sbGet('product_master', `or=(name.ilike.*${orig}*,name.ilike.*${kata}*,name.ilike.*${hira}*)&order=category,name&limit=12`);
       if (results.length === 0) { suggest.style.display = 'none'; return; }
       suggest.innerHTML = results.map(p =>
         `<div style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:14px;" onmousedown="selectProduct('${esc(p.name).replace(/'/g,"\\'")}',${p.price || 0})">
