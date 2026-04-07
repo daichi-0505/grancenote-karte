@@ -896,7 +896,7 @@ body {
 <!-- ===== 画面3: 施術記録入力 ===== -->
 <div id="screen-record" class="screen">
   <div class="header">
-    <button class="header-back" onclick="goBack()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="header-back" onclick="confirmRecordBack()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="header-title">施術記録</div>
     <div class="header-sub" id="record-customer-name"></div>
   </div>
@@ -1531,6 +1531,11 @@ function showScreen(name, skipHistory, skipReload) {
   if (name === 'search' && !skipReload) loadSearchScreen();
   if (name === 'karte') loadKarteScreen();
   if (name === 'segment' && !skipReload) loadSegmentScreen();
+}
+
+function confirmRecordBack() {
+  if (!confirm('保存せずに戻りますか？\n入力中の内容は失われます。')) return;
+  goBack();
 }
 
 function goBack() {
