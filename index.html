@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>顧客カルテ - グラン・セノーテ</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#C4A97D">
@@ -29,7 +29,7 @@
   --danger: #C47070;
   --success: #16A34A;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+* { margin:0; padding:0; box-sizing:border-box; touch-action: manipulation; }
 html, body {
   overflow-x: hidden;
 }
@@ -241,6 +241,14 @@ body {
 .badge-accent { background: var(--accent); }
 .badge-warn { background: var(--danger); }
 .badge-tag { background: var(--accent-40); }
+.plan-badge { display: inline-block; padding: 3px 10px; border-radius: 14px; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #C4A97D, #8B7355); letter-spacing: 0.5px; vertical-align: middle; margin-left: 6px; }
+.karte-status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+.karte-status-none { background: #F5E6E6; color: #C0392B; }
+.karte-status-draft { background: #FFF3E0; color: #E67E22; }
+.karte-status-done { background: #E8F5E9; color: #27AE60; }
+.monthly-visits { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: rgba(196,169,125,0.12); color: var(--accent-dark); margin-top: 4px; }
+.badge-birthday { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #FCE4EC; color: #C2185B; margin-left: 4px; }
+.badge-new { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #E8F5E9; color: #2E7D32; margin-left: 4px; }
 
 /* ── フォーム ── */
 .form-group { margin-bottom: 16px; }
@@ -636,9 +644,50 @@ body {
   }
   .schedule-card { margin-bottom: 0; }
 }
+
+/* PIN認証画面 */
+#pin-screen { position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#pin-screen.hidden { display:none; }
+.pin-logo { font-size:22px; font-weight:800; color:var(--accent); letter-spacing:2px; margin-bottom:4px; }
+.pin-sub { font-size:13px; color:var(--sub); margin-bottom:28px; }
+.pin-dots { display:flex; gap:14px; margin-bottom:28px; }
+.pin-dot { width:16px; height:16px; border-radius:50%; border:2px solid var(--accent); background:transparent; transition:background 0.15s; }
+.pin-dot.filled { background:var(--accent); }
+.pin-error { font-size:13px; color:var(--danger); height:20px; margin-bottom:12px; }
+.pin-pad { display:grid; grid-template-columns:repeat(3,72px); gap:10px; }
+.pin-key { width:72px; height:52px; border-radius:12px; border:1px solid var(--border); background:var(--surface); font-size:22px; font-weight:600; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.pin-key:active { background:var(--accent-40); }
+.pin-key.empty { visibility:hidden; }
 </style>
 </head>
 <body>
+
+<!-- ===== PIN認証画面 ===== -->
+<div id="pin-screen">
+  <div class="pin-logo">Gran Cenote</div>
+  <div class="pin-sub">スタッフ認証</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-error" id="pin-error"></div>
+  <div class="pin-pad">
+    <div class="pin-key" onclick="pinInput('1')">1</div>
+    <div class="pin-key" onclick="pinInput('2')">2</div>
+    <div class="pin-key" onclick="pinInput('3')">3</div>
+    <div class="pin-key" onclick="pinInput('4')">4</div>
+    <div class="pin-key" onclick="pinInput('5')">5</div>
+    <div class="pin-key" onclick="pinInput('6')">6</div>
+    <div class="pin-key" onclick="pinInput('7')">7</div>
+    <div class="pin-key" onclick="pinInput('8')">8</div>
+    <div class="pin-key" onclick="pinInput('9')">9</div>
+    <div class="pin-key empty"></div>
+    <div class="pin-key" onclick="pinInput('0')">0</div>
+    <div class="pin-key" onclick="pinDelete()" style="font-size:14px;font-weight:400;">削除</div>
+  </div>
+</div>
 
 <!-- ===== 画面1: トップ（ダッシュボード） ===== -->
 <div id="screen-search" class="screen active">
@@ -663,6 +712,11 @@ body {
         <div class="menu-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg></div>
         <div class="menu-label">新規顧客登録</div>
         <div class="menu-sub">お客様を新しく追加</div>
+      </div>
+      <div class="menu-card" onclick="showProductManager()">
+        <div class="menu-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg></div>
+        <div class="menu-label">商品管理</div>
+        <div class="menu-sub">商品マスタの追加・編集</div>
       </div>
     </div>
   </div>
@@ -703,6 +757,7 @@ body {
       <div class="avatar" id="karte-avatar" style="width:52px;height:52px;border-radius:26px;font-size:20px;"></div>
       <div style="flex:1;">
         <div style="font-size:18px; font-weight:700;" id="karte-summary-name"></div>
+        <div id="karte-plan-badge" style="margin:2px 0 4px;"></div>
         <div style="font-size:14px; color:var(--sub);" id="karte-summary-info"></div>
       </div>
     </div>
@@ -795,6 +850,12 @@ body {
       <div id="rv-skin" style="font-size:15px; line-height:1.7; white-space:pre-wrap;"></div>
     </div>
 
+    <!-- 施術の流れ -->
+    <div class="card" id="rv-flow-card" style="display:none; border-left-color:#C4A97D;">
+      <div class="card-title">施術の流れ</div>
+      <div id="rv-flow" style="font-size:15px; line-height:1.7; white-space:pre-wrap;"></div>
+    </div>
+
     <!-- 会話メモ -->
     <div class="card" id="rv-talk-card" style="display:none; border-left-color:#D4C5A0;">
       <div class="card-title">会話メモ</div>
@@ -805,6 +866,12 @@ body {
     <div class="card" id="rv-memo-card" style="display:none; border-left-color:var(--danger);">
       <div class="card-title" style="color:var(--danger);">スタッフ共有メモ</div>
       <div id="rv-memo" style="font-size:15px; line-height:1.7; white-space:pre-wrap;"></div>
+    </div>
+
+    <!-- 次回伝えること -->
+    <div class="card" id="rv-next-note-card" style="display:none; border-left-color:#C0392B; background:rgba(192,57,43,0.04);">
+      <div class="card-title" style="color:#C0392B;">次回伝えること・注意点</div>
+      <div id="rv-next-note" style="font-size:15px; line-height:1.7; white-space:pre-wrap; font-weight:600;"></div>
     </div>
 
     <!-- 写真 -->
@@ -862,12 +929,28 @@ body {
       <textarea id="rec-skin" class="form-textarea" placeholder="お肌の状態・所見を記入"></textarea>
     </div>
     <div class="form-group">
+      <label class="form-label">施術の流れ</label>
+      <textarea id="rec-treatment-flow" class="form-textarea" placeholder="クレンジング→吸引→導入→パック等"></textarea>
+    </div>
+    <div class="form-group">
       <label class="form-label">話した内容</label>
       <textarea id="rec-talk" class="form-textarea" placeholder="お客様との会話メモ"></textarea>
     </div>
     <div class="form-group">
       <label class="form-label">スタッフ間共有メモ</label>
       <textarea id="rec-staff-memo" class="form-textarea" placeholder="他のスタッフに共有したいこと"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="color:var(--danger);">次回伝えること・注意点</label>
+      <textarea id="rec-next-note" class="form-textarea" placeholder="次回来店時にお客様に伝えること、注意すること" style="border-color:rgba(192,57,43,0.3);"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">購入商品</label>
+      <div id="rec-purchased-items"></div>
+      <div style="position:relative;">
+        <input id="rec-product-search" type="text" class="form-input" placeholder="商品名を入力して検索・追加..." autocomplete="off" style="margin-top:4px;">
+        <div id="rec-product-suggest" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--border);border-radius:0 0 10px 10px;max-height:180px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">コース消化</label>
@@ -905,7 +988,8 @@ body {
     </div>
 
     <div style="margin-top:24px; display:flex; gap:12px;">
-      <button class="btn btn-primary btn-block" onclick="saveRecord()">保存</button>
+      <button class="btn btn-outline btn-block" onclick="saveRecord('draft')" style="flex:1;">途中保存</button>
+      <button class="btn btn-primary btn-block" onclick="saveRecord('complete')" style="flex:1;">完了</button>
     </div>
     <div id="record-edit-actions" style="margin-top:12px; display:none;">
       <button class="btn btn-danger btn-block btn-sm" onclick="deleteRecord()">この記録を削除</button>
@@ -936,6 +1020,35 @@ body {
         <select id="new-birthday-month" class="form-input" style="flex:1;"><option value="">月</option></select>
         <select id="new-birthday-day" class="form-input" style="flex:1;"><option value="">日（任意）</option></select>
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">契約コース</label>
+      <select id="new-plan" class="form-select">
+        <option value="">なし</option>
+        <optgroup label="定額コース">
+          <option value="月1ゴールド">月1ゴールド</option>
+          <option value="月1プラチナ">月1プラチナ</option>
+          <option value="月1ダイヤ">月1ダイヤ</option>
+          <option value="月2ゴールド">月2ゴールド</option>
+          <option value="月2プラチナ">月2プラチナ</option>
+          <option value="月2ダイヤ">月2ダイヤ</option>
+        </optgroup>
+        <optgroup label="ヒゲ脱毛">
+          <option value="月1ヒゲ脱毛">月1ヒゲ脱毛</option>
+          <option value="月2ヒゲ脱毛">月2ヒゲ脱毛</option>
+        </optgroup>
+        <optgroup label="回数券">
+          <option value="回数券10回">回数券10回</option>
+          <option value="回数券20回">回数券20回</option>
+          <option value="回数券30回">回数券30回</option>
+        </optgroup>
+      </select>
+      <input id="new-plan-custom" type="text" class="form-input" placeholder="上記にない場合はここに入力" style="font-size:13px;margin-top:4px;">
+    </div>
+    <div class="form-group">
+      <label class="form-label">施術時間（分）</label>
+      <input id="new-duration" type="number" class="form-input" value="60" placeholder="60" style="width:100px;">
+      <span style="font-size:12px;color:var(--sub);margin-left:4px;">コース選択で自動設定</span>
     </div>
     <div class="form-group">
       <label class="form-label">メモ</label>
@@ -973,8 +1086,44 @@ body {
       </div>
     </div>
     <div class="form-group">
+      <label class="form-label">契約コース</label>
+      <select id="edit-plan" class="form-select">
+        <option value="">なし</option>
+        <optgroup label="定額コース">
+          <option value="月1ゴールド">月1ゴールド</option>
+          <option value="月1プラチナ">月1プラチナ</option>
+          <option value="月1ダイヤ">月1ダイヤ</option>
+          <option value="月2ゴールド">月2ゴールド</option>
+          <option value="月2プラチナ">月2プラチナ</option>
+          <option value="月2ダイヤ">月2ダイヤ</option>
+        </optgroup>
+        <optgroup label="ヒゲ脱毛">
+          <option value="月1ヒゲ脱毛">月1ヒゲ脱毛</option>
+          <option value="月2ヒゲ脱毛">月2ヒゲ脱毛</option>
+        </optgroup>
+        <optgroup label="回数券">
+          <option value="回数券10回">回数券10回</option>
+          <option value="回数券20回">回数券20回</option>
+          <option value="回数券30回">回数券30回</option>
+        </optgroup>
+      </select>
+      <div style="margin-top:4px;">
+        <input id="edit-plan-custom" type="text" class="form-input" placeholder="上記にない場合はここに入力" style="font-size:13px;">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">施術時間（分）</label>
+      <input id="edit-duration" type="number" class="form-input" placeholder="60" style="width:100px;">
+    </div>
+    <div class="form-group">
       <label class="form-label">メモ</label>
       <textarea id="edit-memo" class="form-textarea"></textarea>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input id="edit-is-new" type="checkbox" style="width:18px;height:18px;">
+        <span class="form-label" style="margin:0;">NEWバッジを表示</span>
+      </label>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-edit-customer')">キャンセル</button>
@@ -1004,6 +1153,7 @@ body {
         <button class="staff-chip" data-preset="birthday" onclick="togglePreset(this)">今月が誕生日</button>
         <button class="staff-chip" data-preset="dormant" onclick="togglePreset(this)">3ヶ月以上来ていない</button>
         <button class="staff-chip" data-preset="course_low" onclick="togglePreset(this)">コース残り1回以下</button>
+        <button class="staff-chip" data-preset="teigaku" onclick="togglePreset(this)">定額会員</button>
       </div>
 
       <div style="font-size:14px;font-weight:600;color:var(--label);margin-bottom:8px;">詳細条件</div>
@@ -1080,9 +1230,10 @@ body {
 <div id="modal-add-purchase" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
     <div class="modal-title">商品購入記録</div>
-    <div class="form-group">
+    <div class="form-group" style="position:relative;">
       <label class="form-label">商品名 <span class="required">必須</span></label>
-      <input id="purchase-product" type="text" class="form-input" placeholder="クレンジング、美容液等">
+      <input id="purchase-product" type="text" class="form-input" placeholder="商品名を入力して検索..." autocomplete="off">
+      <div id="product-suggest" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--border);border-radius:0 0 10px 10px;max-height:200px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
     </div>
     <div style="display:flex; gap:12px;">
       <div class="form-group" style="flex:1;">
@@ -1109,6 +1260,50 @@ body {
       <button class="btn btn-outline" onclick="closeModal('modal-add-purchase')">キャンセル</button>
       <button class="btn btn-primary" onclick="savePurchase()">登録</button>
     </div>
+    <div style="text-align:center;margin-top:8px;">
+      <a href="#" onclick="event.preventDefault();closeModal('modal-add-purchase');showProductManager()" style="font-size:12px;color:var(--sub);">商品マスタを管理</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 商品マスタ管理モーダル ===== -->
+<div id="modal-product-manager" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="max-height:85vh;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="modal-title" style="margin:0;">商品マスタ管理</div>
+      <button onclick="closeModal('modal-product-manager')" style="background:none;border:none;font-size:20px;color:var(--sub);cursor:pointer;">&times;</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input id="pm-search" type="text" class="form-input" placeholder="商品名で検索..." style="flex:1;" oninput="filterProductList()">
+      <button class="btn btn-primary btn-sm" onclick="showAddProductForm()" style="white-space:nowrap;padding:8px 14px;">+ 追加</button>
+    </div>
+    <div id="pm-add-form" style="display:none;background:var(--bg);padding:12px;border-radius:10px;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">新規商品追加</div>
+      <input id="pm-new-name" type="text" class="form-input" placeholder="商品名" style="margin-bottom:6px;">
+      <div style="display:flex;gap:8px;margin-bottom:6px;">
+        <input id="pm-new-price" type="number" class="form-input" placeholder="価格（税込）" style="flex:1;">
+        <select id="pm-new-category" class="form-select" style="flex:1;">
+          <option value="スキンケア">スキンケア</option>
+          <option value="ADS">ADS</option>
+          <option value="Diva">Diva</option>
+          <option value="パック・マスク">パック・マスク</option>
+          <option value="日焼け止め">日焼け止め</option>
+          <option value="ボディ・ヘアケア">ボディ・ヘアケア</option>
+          <option value="メイクアップ">メイクアップ</option>
+          <option value="インナーケア">インナーケア</option>
+          <option value="まつ毛">まつ毛</option>
+          <option value="生活雑貨">生活雑貨</option>
+          <option value="エステ用品">エステ用品</option>
+          <option value="美容機器">美容機器</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('pm-add-form').style.display='none'" style="flex:1;">キャンセル</button>
+        <button class="btn btn-primary btn-sm" onclick="saveNewProduct()" style="flex:1;">追加</button>
+      </div>
+    </div>
+    <div id="pm-list" style="max-height:50vh;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -1152,6 +1347,24 @@ body {
 </div>
 
 <!-- ===== 写真拡大ビューア ===== -->
+<!-- ===== 朝の申し送りモーダル ===== -->
+<div id="morning-briefing" class="modal-overlay" style="z-index:2000;">
+  <div class="modal" style="max-height:80vh; overflow-y:auto;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <div class="modal-title" style="margin:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4A97D" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;margin-right:4px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        本日の申し送り
+      </div>
+      <button onclick="closeBriefing()" style="background:none;border:none;font-size:20px;color:var(--sub);cursor:pointer;">&times;</button>
+    </div>
+    <div id="briefing-content"></div>
+    <div style="margin-top:16px; display:flex; gap:10px;">
+      <button class="btn btn-outline btn-block" onclick="dismissBriefing()" style="flex:1;font-size:13px;">今日は表示しない</button>
+      <button class="btn btn-primary btn-block" onclick="closeBriefing()" style="flex:1;">確認しました</button>
+    </div>
+  </div>
+</div>
+
 <div id="photo-viewer" class="photo-viewer" onclick="if(event.target===this)this.classList.remove('show')">
   <button class="photo-viewer-close" onclick="document.getElementById('photo-viewer').classList.remove('show')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
   <img id="photo-viewer-img" src="">
@@ -1159,6 +1372,40 @@ body {
 </div>
 
 <script>
+// ── PIN認証 ──
+const APP_PIN = '3141';
+const PIN_KEY = 'pin_karte'; // アプリごとに別キー
+let pinValue = '';
+
+function pinInput(n) {
+  if (pinValue.length >= 4) return;
+  pinValue += n;
+  for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.toggle('filled', i < pinValue.length);
+  document.getElementById('pin-error').textContent = '';
+  if (pinValue.length === 4) {
+    setTimeout(() => {
+      if (pinValue === APP_PIN) {
+        localStorage.setItem(PIN_KEY, APP_PIN);
+        document.getElementById('pin-screen').classList.add('hidden');
+      } else {
+        document.getElementById('pin-error').textContent = 'PINが違います';
+        pinValue = '';
+        for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.remove('filled');
+      }
+    }, 200);
+  }
+}
+function pinDelete() {
+  if (pinValue.length > 0) {
+    pinValue = pinValue.slice(0, -1);
+    for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.toggle('filled', i < pinValue.length);
+  }
+}
+// 認証済み（かつPINが変更されていない）ならPIN画面を非表示
+if (localStorage.getItem(PIN_KEY) === APP_PIN) {
+  document.getElementById('pin-screen').classList.add('hidden');
+}
+
 // ── Supabase API設定 ──
 const SUPABASE_URL = 'https://lheojchyrxjlagxfbgjo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_sV418nh9Akoc0EnxchRU4g_H2FFAa-4';
@@ -1275,22 +1522,23 @@ function buildSearchOr(q) {
 // ── 画面切り替え ──
 let screenHistory = ['search'];
 
-function showScreen(name, skipHistory) {
+function showScreen(name, skipHistory, skipReload) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + name).classList.add('active');
   if (!skipHistory && screenHistory[screenHistory.length - 1] !== name) {
     screenHistory.push(name);
   }
-  if (name === 'search') loadSearchScreen();
+  if (name === 'search' && !skipReload) loadSearchScreen();
   if (name === 'karte') loadKarteScreen();
-  if (name === 'segment') loadSegmentScreen();
+  if (name === 'segment' && !skipReload) loadSegmentScreen();
 }
 
 function goBack() {
   if (screenHistory.length > 1) {
     screenHistory.pop(); // 現在の画面を捨てる
     const prev = screenHistory[screenHistory.length - 1];
-    showScreen(prev, true); // 履歴に追加しない
+    // 戻る時は前画面の状態を保持（リロードしない）
+    showScreen(prev, true, true);
   } else {
     showScreen('search', true);
   }
@@ -1432,14 +1680,26 @@ function toggleScheduleExpand() {
   renderScheduleList();
 }
 
+let scheduleKarteMap = {}; // customer_id → karte status for schedule date
+let scheduleCustomerMap = {}; // customer_id → customer info for badges
+
 async function loadSchedule() {
   const dk = `${scheduleDate.getFullYear()}-${String(scheduleDate.getMonth()+1).padStart(2,'0')}-${String(scheduleDate.getDate()).padStart(2,'0')}`;
   document.getElementById('schedule-date-label').textContent = fmtScheduleDate(scheduleDate);
 
-  // 予約帳から当日の予約を取得（施術のみ）
-  const reservations = await sbGet('yoyaku_reservations',
-    `date=eq.${dk}&type=eq.treatment&order=start_time&select=id,name,menu,staff_id,start_time,end_time,customer_id`);
+  // 全APIを並列取得
+  const [reservations, karteRecords] = await Promise.all([
+    sbGet('yoyaku_reservations', `date=eq.${dk}&type=eq.treatment&order=start_time&select=id,name,menu,staff_id,start_time,end_time,customer_id`),
+    sbGet('karte_records', `date=eq.${dk}&select=customer_id,status`),
+  ]);
   scheduleData = reservations;
+
+  // カルテステータスマップ
+  scheduleKarteMap = {};
+  karteRecords.forEach(kr => {
+    const prev = scheduleKarteMap[kr.customer_id];
+    if (!prev || kr.status === 'complete') scheduleKarteMap[kr.customer_id] = kr.status || 'complete';
+  });
 
   // スタッフフィルタチップ
   const staffIds = [...new Set(reservations.map(r => r.staff_id).filter(Boolean))];
@@ -1449,7 +1709,17 @@ async function loadSchedule() {
       `<button class="staff-chip ${activeStaffFilter===sid?'active':''}" onclick="toggleStaffFilter('${sid}',this)">${staffName(sid)}</button>`
     ).join('');
 
+  // まず即座にリスト表示（バッジなし）
+  scheduleCustomerMap = {};
   renderScheduleList();
+
+  // 顧客情報を非同期で取得してバッジ更新
+  const cids = reservations.filter(r => r.customer_id).map(r => r.customer_id);
+  if (cids.length > 0) {
+    const custs = await sbGet('customers', `id=in.(${[...new Set(cids)].join(',')})&select=id,birthday,is_new,membership_plan,default_duration`);
+    custs.forEach(c => { scheduleCustomerMap[c.id] = c; });
+    renderScheduleList(); // バッジ付きで再描画
+  }
 }
 
 function renderScheduleList() {
@@ -1476,9 +1746,23 @@ function renderScheduleList() {
   list.innerHTML = visible.map(r => {
     const hasKarte = !!r.customer_id;
     const sName = staffName(r.staff_id);
-    return `<div class="schedule-card ${hasKarte ? '' : 'no-karte'}" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : `quickRegister('${esc(r.name).replace(/'/g,"\\'")}','${r.id}')`}">
+    // カルテステータス判定
+    let karteBadge = '';
+    if (hasKarte) {
+      const ks = scheduleKarteMap[r.customer_id];
+      if (ks === 'complete') karteBadge = '<span class="karte-status karte-status-done">記入済</span>';
+      else if (ks === 'draft') karteBadge = '<span class="karte-status karte-status-draft">記入途中</span>';
+      else karteBadge = '<span class="karte-status karte-status-none">未記入</span>';
+    }
+    const custInfo = hasKarte ? scheduleCustomerMap[r.customer_id] : null;
+    const custBadges = custInfo ? customerBadges(custInfo) : '';
+    const badgeRow = (karteBadge || custBadges) ? `<div style="margin-bottom:2px;">${karteBadge}${custBadges}</div>` : '';
+    const isBirthMonth = custInfo && custInfo.birthday && new Date(custInfo.birthday).getMonth() + 1 === new Date().getMonth() + 1;
+    const bdStyle = isBirthMonth ? 'border-color:#E91E63;border-width:2px;background:rgba(233,30,99,0.03);' : '';
+    return `<div class="schedule-card ${hasKarte ? '' : 'no-karte'}" style="${bdStyle}" onclick="${hasKarte ? `openKarte('${r.customer_id}')` : `quickRegister('${esc(r.name).replace(/'/g,"\\'")}','${r.id}')`}">
       <div class="schedule-time">${r.start_time}~</div>
       <div class="schedule-info">
+        ${badgeRow}
         <div class="schedule-name">${esc(r.name)}</div>
         <div class="schedule-meta">${esc(r.menu || '')}${sName ? `<span class="schedule-staff">${sName}</span>` : ''}</div>
       </div>
@@ -1547,18 +1831,35 @@ async function loadKarteScreen() {
 
   // ヘッダー
   const age = getAge(c.birthday);
-  document.getElementById('karte-name').innerHTML = esc(c.name) + (age !== null ? ` <span style="font-size:16px;color:var(--sub);font-weight:400;">(${age}歳)</span>` : '');
+  document.getElementById('karte-name').innerHTML = esc(c.name) + (age !== null ? ` <span style="font-size:16px;color:var(--sub);font-weight:400;">(${age}歳)</span>` : '') + customerBadges(c);
 
   // サマリーカード
   document.getElementById('karte-avatar').textContent = c.name.charAt(0);
   document.getElementById('karte-summary-name').textContent = c.name;
+
+  // 来店回数を取得（HP移行分 + カルテ記録）— プランバッジで使うため先に取得
+  const allRecords = await sbGet('karte_records',
+    `customer_id=eq.${c.id}&order=date.desc,created_at.desc&limit=50`);
+
+  // プランバッジ＋月間残り回数
+  let planHtml = c.membership_plan ? `<span class="plan-badge">${esc(c.membership_plan)}</span>` : '';
+  if (c.membership_plan) {
+    const monthlyMax = c.membership_plan.includes('月2') ? 2 : c.membership_plan.includes('月1') ? 1 : 0;
+    if (monthlyMax > 0) {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const monthRecords = allRecords.filter(r => r.date && r.date.startsWith(ym) && r.status !== 'draft');
+      const used = monthRecords.length;
+      const remaining = Math.max(0, monthlyMax - used);
+      const color = remaining === 0 ? 'var(--success)' : remaining === monthlyMax ? 'var(--danger)' : 'var(--accent-dark)';
+      planHtml += ` <span class="monthly-visits" style="color:${color}">今月 ${used}/${monthlyMax}回${remaining > 0 ? `（残${remaining}回）` : '（消化済）'}</span>`;
+    }
+  }
+  if (c.default_duration) planHtml += ` <span class="monthly-visits">${c.default_duration}分</span>`;
+  document.getElementById('karte-plan-badge').innerHTML = planHtml;
   const infoParts = [];
   if (c.birthday) infoParts.push(fmtBirthday(c.birthday));
   if (c.phone) infoParts.push(formatPhone(c.phone));
-
-  // 来店回数を取得（HP移行分 + カルテ記録）
-  const allRecords = await sbGet('karte_records',
-    `customer_id=eq.${c.id}&order=date.desc,created_at.desc&limit=50`);
   const hpCount = c.hp_visit_count || 0;
   const karteCount = allRecords.length;
   const totalVisits = hpCount + karteCount;
@@ -1599,12 +1900,14 @@ async function loadKarteScreen() {
 
       let memoHtml = '';
       if (r.skin_condition) memoHtml += `<div><span style="font-weight:600;color:var(--accent-dark);">肌:</span> ${esc(r.skin_condition)}</div>`;
+      if (r.treatment_flow) memoHtml += `<div><span style="font-weight:600;color:var(--accent);">流れ:</span> ${esc(r.treatment_flow)}</div>`;
       if (r.talk_memo) memoHtml += `<div><span style="font-weight:600;color:var(--accent-dark);">会話:</span> ${esc(r.talk_memo)}</div>`;
       if (r.staff_memo) memoHtml += `<div><span style="font-weight:600;color:var(--danger);">共有:</span> ${esc(r.staff_memo)}</div>`;
+      if (r.next_note) memoHtml += `<div><span style="font-weight:600;color:#C0392B;">次回:</span> ${esc(r.next_note)}</div>`;
 
       return `<div class="record-card" onclick="viewRecord('${r.id}')">
         <div class="record-card-header">
-          <div class="record-card-date">${fmtDateFull(r.date)}</div>
+          <div class="record-card-date">${fmtDateFull(r.date)} ${r.status === 'draft' ? '<span class="karte-status karte-status-draft">記入途中</span>' : ''}</div>
           <div class="record-card-menu">${esc(r.menu || '(未入力)')}</div>
           ${CHEVRON}
         </div>
@@ -1640,7 +1943,7 @@ async function viewRecord(id) {
   const r = records[0];
 
   document.getElementById('rv-title').textContent = currentCustomer?.name || '施術カルテ';
-  document.getElementById('rv-date').textContent = fmtDateFull(r.date);
+  document.getElementById('rv-date').innerHTML = fmtDateFull(r.date) + (r.status === 'draft' ? ' <span class="karte-status karte-status-draft">記入途中</span>' : '');
   document.getElementById('rv-menu').textContent = r.menu || '(メニュー未入力)';
   document.getElementById('rv-duration').textContent = r.duration_min ? r.duration_min + '分' : '';
   document.getElementById('rv-duration').style.display = r.duration_min ? '' : 'none';
@@ -1652,6 +1955,11 @@ async function viewRecord(id) {
   if (r.skin_condition) { skinCard.style.display = ''; document.getElementById('rv-skin').textContent = r.skin_condition; }
   else skinCard.style.display = 'none';
 
+  // 施術の流れ
+  const flowCard = document.getElementById('rv-flow-card');
+  if (r.treatment_flow) { flowCard.style.display = ''; document.getElementById('rv-flow').textContent = r.treatment_flow; }
+  else flowCard.style.display = 'none';
+
   // 会話メモ
   const talkCard = document.getElementById('rv-talk-card');
   if (r.talk_memo) { talkCard.style.display = ''; document.getElementById('rv-talk').textContent = r.talk_memo; }
@@ -1661,6 +1969,11 @@ async function viewRecord(id) {
   const memoCard = document.getElementById('rv-memo-card');
   if (r.staff_memo) { memoCard.style.display = ''; document.getElementById('rv-memo').textContent = r.staff_memo; }
   else memoCard.style.display = 'none';
+
+  // 次回伝えること
+  const nextNoteCard = document.getElementById('rv-next-note-card');
+  if (r.next_note) { nextNoteCard.style.display = ''; document.getElementById('rv-next-note').textContent = r.next_note; }
+  else nextNoteCard.style.display = 'none';
 
   // 次回予約
   const nextCard = document.getElementById('rv-next-card');
@@ -1697,9 +2010,14 @@ function showRecordForm(recordId) {
   document.getElementById('rec-staff').value = '';
   document.getElementById('rec-room').value = '';
   document.getElementById('rec-skin').value = '';
+  document.getElementById('rec-treatment-flow').value = '';
   document.getElementById('rec-talk').value = '';
   document.getElementById('rec-staff-memo').value = '';
+  document.getElementById('rec-next-note').value = '';
   document.getElementById('rec-next').value = '';
+  recPurchasedItems = [];
+  renderRecPurchasedItems();
+  document.getElementById('rec-product-search').value = '';
   document.getElementById('record-edit-actions').style.display = 'none';
   pendingPhotos = [];
   renderPhotoPreviews();
@@ -1724,8 +2042,10 @@ async function loadRecordForEdit(id) {
   document.getElementById('rec-staff').value = r.staff_id || '';
   document.getElementById('rec-room').value = r.room_id || '';
   document.getElementById('rec-skin').value = r.skin_condition || '';
+  document.getElementById('rec-treatment-flow').value = r.treatment_flow || '';
   document.getElementById('rec-talk').value = r.talk_memo || '';
   document.getElementById('rec-staff-memo').value = r.staff_memo || '';
+  document.getElementById('rec-next-note').value = r.next_note || '';
   document.getElementById('rec-next').value = r.next_visit_date || '';
   document.getElementById('record-edit-actions').style.display = '';
 }
@@ -1734,9 +2054,9 @@ function editRecord(id) {
   showRecordForm(id);
 }
 
-async function saveRecord() {
+async function saveRecord(status) {
   if (isSaving) return;
-  showSaving('カルテを保存中...');
+  showSaving(status === 'draft' ? '途中保存中...' : 'カルテを保存中...');
   const data = {
     customer_id: currentCustomer.id,
     date: document.getElementById('rec-date').value || todayStr(),
@@ -1745,9 +2065,12 @@ async function saveRecord() {
     staff_id: document.getElementById('rec-staff').value || null,
     room_id: document.getElementById('rec-room').value || null,
     skin_condition: document.getElementById('rec-skin').value,
+    treatment_flow: document.getElementById('rec-treatment-flow').value,
     talk_memo: document.getElementById('rec-talk').value,
     staff_memo: document.getElementById('rec-staff-memo').value,
+    next_note: document.getElementById('rec-next-note').value,
     next_visit_date: document.getElementById('rec-next').value || null,
+    status: status || 'complete',
   };
 
   let result;
@@ -1762,10 +2085,29 @@ async function saveRecord() {
     if (pendingPhotos.length > 0) {
       await uploadPendingPhotos(result.id, currentCustomer.id);
     }
+    // 購入商品を保存
+    if (recPurchasedItems.length > 0 && !editingRecordId) {
+      for (const item of recPurchasedItems) {
+        await sbPost('karte_purchases', {
+          customer_id: currentCustomer.id,
+          product_name: item.name,
+          price: item.price || null,
+          purchased_at: data.date,
+          source: 'store',
+          estimated_days: 60,
+          auto_imported: false
+        });
+      }
+    }
     // コース消化
     const courseId = document.getElementById('rec-course').value;
     if (courseId && !editingRecordId) {
       await consumeCourse(courseId);
+    }
+    // 完了保存時にNEWバッジを自動解除
+    if (status === 'complete' && currentCustomer.is_new) {
+      await sbPatch('customers', `id=eq.${currentCustomer.id}`, { is_new: false });
+      currentCustomer.is_new = false;
     }
     hideSaving();
     showScreen('karte');
@@ -2091,6 +2433,232 @@ async function savePurchase() {
   }
 }
 
+// ── 施術記録内の購入商品 ──
+let recPurchasedItems = []; // [{name, price, category}]
+
+function getTaxRate(category) {
+  const reduced = ['インナーケア', 'サプリメント', 'ダイエット'];
+  return reduced.includes(category) ? 8 : 10;
+}
+
+function renderRecPurchasedItems() {
+  const box = document.getElementById('rec-purchased-items');
+  if (recPurchasedItems.length === 0) { box.innerHTML = ''; return; }
+
+  const cards = recPurchasedItems.map((item, i) => {
+    const rate = getTaxRate(item.category);
+    const taxIncl = item.price || 0;
+    const taxExcl = Math.round(taxIncl / (1 + rate / 100));
+    return `
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:6px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(item.name)}</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:2px;">
+          <span style="font-weight:600;">¥${taxIncl.toLocaleString()}</span>
+          <span style="font-size:10px;margin-left:2px;">(税込 ${rate}%)</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:6px;">税抜 ¥${taxExcl.toLocaleString()}</span>
+        </div>
+      </div>
+      <button onclick="recPurchasedItems.splice(${i},1);renderRecPurchasedItems()" style="background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;padding:2px 6px;line-height:1;">&times;</button>
+    </div>`;
+  }).join('');
+
+  // 合計計算
+  let totalIncl = 0, totalExcl = 0;
+  recPurchasedItems.forEach(item => {
+    const rate = getTaxRate(item.category);
+    const incl = item.price || 0;
+    totalIncl += incl;
+    totalExcl += Math.round(incl / (1 + rate / 100));
+  });
+  const totalTax = totalIncl - totalExcl;
+
+  const summary = `
+  <div style="margin-top:8px;padding:12px 14px;background:linear-gradient(135deg,#FAF8F4,#F5F0E8);border:1px solid var(--accent-40);border-radius:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;">
+      <span style="font-size:12px;font-weight:700;color:var(--accent-dark);">合計 (${recPurchasedItems.length}点)</span>
+      <span style="font-size:18px;font-weight:700;color:var(--text);">¥${totalIncl.toLocaleString()}</span>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:4px;">
+      <span style="font-size:11px;color:var(--muted);">税抜 ¥${totalExcl.toLocaleString()}</span>
+      <span style="font-size:11px;color:var(--muted);">消費税 ¥${totalTax.toLocaleString()}</span>
+    </div>
+  </div>`;
+
+  box.innerHTML = cards + summary;
+}
+
+function addRecPurchasedItem(name, price, category) {
+  recPurchasedItems.push({ name, price, category: category || '' });
+  renderRecPurchasedItems();
+  document.getElementById('rec-product-search').value = '';
+  document.getElementById('rec-product-suggest').style.display = 'none';
+}
+
+function addRecPurchasedItemCustom(name) {
+  const input = prompt(`「${name}」の価格（税込）を入力してください`, '');
+  if (input === null) return;
+  const price = parseInt(input.replace(/[,，円¥\s]/g, ''), 10) || 0;
+  addRecPurchasedItem(name, price, '');
+}
+
+// ひらがな⇔カタカナ変換
+function toKatakana(s) { return s.replace(/[\u3041-\u3096]/g, c => String.fromCharCode(c.charCodeAt(0) + 96)); }
+function toHiragana(s) { return s.replace(/[\u30A1-\u30F6]/g, c => String.fromCharCode(c.charCodeAt(0) - 96)); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const recSearch = document.getElementById('rec-product-search');
+  if (!recSearch) return;
+  let recProdTimeout = null;
+  recSearch.addEventListener('input', function() {
+    clearTimeout(recProdTimeout);
+    const q = this.value.trim();
+    const suggest = document.getElementById('rec-product-suggest');
+    if (q.length < 1) { suggest.style.display = 'none'; return; }
+    recProdTimeout = setTimeout(async () => {
+      const kata = encodeURIComponent(toKatakana(q));
+      const hira = encodeURIComponent(toHiragana(q));
+      const orig = encodeURIComponent(q);
+      const results = await sbGet('product_master', `or=(name.ilike.*${orig}*,name.ilike.*${kata}*,name.ilike.*${hira}*)&order=category,name&limit=12`);
+      if (results.length === 0) {
+        suggest.innerHTML = `<div style="padding:10px 12px;cursor:pointer;font-size:13px;color:var(--accent);" onmousedown="addRecPurchasedItemCustom('${esc(q).replace(/'/g,"\\'")}')">「${esc(q)}」をそのまま追加</div>`;
+        suggest.style.display = 'block';
+        return;
+      }
+      suggest.innerHTML = results.map(p => {
+        const rate = getTaxRate(p.category);
+        return `<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;" onmousedown="addRecPurchasedItem('${esc(p.name).replace(/'/g,"\\'")}',${p.price||0},'${esc(p.category||'').replace(/'/g,"\\'")}')">
+          <span style="font-weight:600;">${esc(p.name)}</span>
+          <span style="color:var(--sub);font-size:11px;margin-left:6px;">¥${(p.price||0).toLocaleString()} (税込 ${rate}%)</span>
+        </div>`;
+      }).join('') + `<div style="padding:8px 12px;cursor:pointer;font-size:12px;color:var(--accent);border-top:1px solid #eee;" onmousedown="addRecPurchasedItemCustom('${esc(q).replace(/'/g,"\\'")}')">「${esc(q)}」をそのまま追加</div>`;
+      suggest.style.display = 'block';
+    }, 200);
+  });
+  recSearch.addEventListener('blur', () => {
+    setTimeout(() => { document.getElementById('rec-product-suggest').style.display = 'none'; }, 200);
+  });
+});
+
+// ── 商品マスタ検索オートコンプリート（購入記録モーダル用） ──
+let productSearchTimeout = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('purchase-product');
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    clearTimeout(productSearchTimeout);
+    const q = this.value.trim();
+    const suggest = document.getElementById('product-suggest');
+    if (q.length < 1) { suggest.style.display = 'none'; return; }
+    productSearchTimeout = setTimeout(async () => {
+      const kata = encodeURIComponent(toKatakana(q));
+      const hira = encodeURIComponent(toHiragana(q));
+      const orig = encodeURIComponent(q);
+      const results = await sbGet('product_master', `or=(name.ilike.*${orig}*,name.ilike.*${kata}*,name.ilike.*${hira}*)&order=category,name&limit=12`);
+      if (results.length === 0) { suggest.style.display = 'none'; return; }
+      suggest.innerHTML = results.map(p =>
+        `<div style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:14px;" onmousedown="selectProduct('${esc(p.name).replace(/'/g,"\\'")}',${p.price || 0})">
+          <div style="font-weight:600;">${esc(p.name)}</div>
+          <div style="font-size:12px;color:var(--sub);">${p.category || ''} / ¥${(p.price||0).toLocaleString()}</div>
+        </div>`
+      ).join('');
+      suggest.style.display = 'block';
+    }, 200);
+  });
+  inp.addEventListener('blur', () => {
+    setTimeout(() => { document.getElementById('product-suggest').style.display = 'none'; }, 200);
+  });
+});
+
+function selectProduct(name, price) {
+  document.getElementById('purchase-product').value = name;
+  document.getElementById('purchase-price').value = price || '';
+  document.getElementById('product-suggest').style.display = 'none';
+}
+
+// ── 商品マスタ管理 ──
+let allProducts = [];
+
+async function showProductManager() {
+  allProducts = await sbGet('product_master', 'order=category,name&limit=500');
+  document.getElementById('pm-search').value = '';
+  document.getElementById('pm-add-form').style.display = 'none';
+  filterProductList();
+  document.getElementById('modal-product-manager').classList.add('show');
+}
+
+function filterProductList() {
+  const q = (document.getElementById('pm-search').value || '').trim().toLowerCase();
+  const filtered = q ? allProducts.filter(p => p.name.toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q)) : allProducts;
+  const list = document.getElementById('pm-list');
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--sub);padding:20px;">商品が見つかりません</div>';
+    return;
+  }
+  let currentCat = '';
+  list.innerHTML = filtered.map(p => {
+    let catHeader = '';
+    if (p.category !== currentCat) {
+      currentCat = p.category;
+      catHeader = `<div style="font-size:11px;font-weight:700;color:var(--accent);padding:10px 0 4px;border-bottom:1px solid var(--border);">${esc(p.category || 'その他')}</div>`;
+    }
+    return catHeader + `<div style="display:flex;align-items:center;padding:8px 4px;border-bottom:1px solid #f5f5f5;gap:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.name)}</div>
+        <div style="font-size:12px;color:var(--sub);">¥${(p.price||0).toLocaleString()}</div>
+      </div>
+      <button onclick="editProduct('${p.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--sub);">編集</button>
+      <button onclick="deleteProduct('${p.id}','${esc(p.name).replace(/'/g,"\\'")}')" style="background:none;border:1px solid #fdd;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--danger);">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function showAddProductForm() {
+  document.getElementById('pm-add-form').style.display = '';
+  document.getElementById('pm-new-name').value = '';
+  document.getElementById('pm-new-price').value = '';
+  document.getElementById('pm-new-category').value = 'スキンケア';
+  document.getElementById('pm-new-name').focus();
+}
+
+async function saveNewProduct() {
+  const name = document.getElementById('pm-new-name').value.trim();
+  if (!name) { alert('商品名を入力してください'); return; }
+  const data = {
+    name,
+    price: parseInt(document.getElementById('pm-new-price').value) || null,
+    category: document.getElementById('pm-new-category').value
+  };
+  const result = await sbPost('product_master', data);
+  if (result) {
+    document.getElementById('pm-add-form').style.display = 'none';
+    allProducts.push(result);
+    allProducts.sort((a, b) => (a.category||'').localeCompare(b.category||'') || a.name.localeCompare(b.name));
+    filterProductList();
+  }
+}
+
+async function deleteProduct(id, name) {
+  if (!confirm(`「${name}」を商品マスタから削除しますか？`)) return;
+  await sbDelete('product_master', `id=eq.${id}`);
+  allProducts = allProducts.filter(p => p.id !== id);
+  filterProductList();
+}
+
+async function editProduct(id) {
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  const newName = prompt('商品名', p.name);
+  if (newName === null) return;
+  const newPrice = prompt('価格（税込）', p.price || '');
+  if (newPrice === null) return;
+  const data = { name: newName.trim() || p.name, price: parseInt(newPrice) || p.price };
+  await sbPatch('product_master', `id=eq.${id}`, data);
+  p.name = data.name;
+  p.price = data.price;
+  filterProductList();
+}
+
 // 購入タブの読み込み
 async function loadPurchases(customerId) {
   const purchases = await sbGet('karte_purchases',
@@ -2245,13 +2813,14 @@ tr:nth-child(even) { background: #fafafa; }
     });
     html += '</div>';
   }
-  html += `<table><thead><tr><th>日付</th><th>メニュー</th><th>時間</th><th>肌状態</th><th>購入商品</th><th>担当</th></tr></thead><tbody>`;
+  html += `<table><thead><tr><th>日付</th><th>メニュー</th><th>時間</th><th>肌状態</th><th>施術の流れ</th><th>共有メモ</th><th>担当</th></tr></thead><tbody>`;
   records.forEach(r => {
     html += `<tr>
       <td>${fmtDateFull(r.date)}</td>
       <td>${r.menu || ''}</td>
       <td>${r.duration_min ? r.duration_min+'分' : ''}</td>
       <td>${r.skin_condition || ''}</td>
+      <td>${r.treatment_flow || ''}</td>
       <td>${r.staff_memo || ''}</td>
       <td>${staffName(r.staff_id)}</td>
     </tr>`;
@@ -2364,6 +2933,9 @@ async function runCombinedFilter() {
     if (activePresets.has('course_low')) {
       if (!lowCourseCustomers.has(c.id)) return false;
     }
+    if (activePresets.has('teigaku')) {
+      if (!c.membership_plan) return false;
+    }
 
     // 詳細条件
     const bMonth = document.getElementById('seg-birthday-month')?.value;
@@ -2441,7 +3013,7 @@ function renderSegmentResults() {
     <div class="list-item-card" onclick="openKarte('${c.id}')">
       <div class="avatar">${esc(c.name).charAt(0)}</div>
       <div style="flex:1;">
-        <div class="list-name">${esc(c.name)}</div>
+        <div class="list-name">${esc(c.name)}${c.membership_plan ? `<span class="plan-badge" style="font-size:10px;padding:2px 7px;margin-left:6px;">${esc(c.membership_plan)}</span>` : ''}${customerBadges(c)}</div>
         <div class="list-sub">${c._lastVisit ? '最終:'+fmtDateFull(c._lastVisit) : (c.hp_last_visit ? '最終:'+fmtDateFull(c.hp_last_visit) : '')}${(c._visitCount + (c.hp_visit_count||0)) ? ' / '+(c._visitCount + (c.hp_visit_count||0))+'回' : ''}${c.phone ? ' / '+formatPhone(c.phone) : ''}</div>
       </div>
       ${CHEVRON}
@@ -2518,7 +3090,11 @@ function showNewCustomerModal() {
   document.getElementById('new-kana').value = '';
   document.getElementById('new-phone').value = '';
   setBirthdaySelects('new', null);
+  document.getElementById('new-plan').value = '';
+  document.getElementById('new-plan-custom').value = '';
+  document.getElementById('new-duration').value = 60;
   document.getElementById('new-memo').value = '';
+  document.getElementById('new-plan').onchange = function() { document.getElementById('new-duration').value = planToDuration(this.value); };
   document.getElementById('modal-new-customer').classList.add('show');
 }
 
@@ -2529,7 +3105,11 @@ function quickRegister(name, reservationId) {
   document.getElementById('new-kana').value = '';
   document.getElementById('new-phone').value = '';
   setBirthdaySelects('new', null);
+  document.getElementById('new-plan').value = '';
+  document.getElementById('new-plan-custom').value = '';
+  document.getElementById('new-duration').value = 60;
   document.getElementById('new-memo').value = '';
+  document.getElementById('new-plan').onchange = function() { document.getElementById('new-duration').value = planToDuration(this.value); };
   document.getElementById('modal-new-customer').classList.add('show');
 }
 
@@ -2539,12 +3119,17 @@ async function saveNewCustomer() {
   if (!name) { alert('名前を入力してください'); return; }
   showSaving('登録中...');
   const phone = normalizePhone(document.getElementById('new-phone').value);
+  const newPlanSelect = document.getElementById('new-plan').value;
+  const newPlanCustom = document.getElementById('new-plan-custom').value.trim();
   const data = {
     name,
     name_kana: document.getElementById('new-kana').value.trim(),
     phone,
     birthday: getBirthdayFromSelects('new'),
     memo: document.getElementById('new-memo').value,
+    membership_plan: newPlanCustom || newPlanSelect,
+    default_duration: parseInt(document.getElementById('new-duration').value) || 60,
+    is_new: true,
   };
   const result = await sbPost('customers', data);
   if (result) {
@@ -2573,6 +3158,22 @@ function showEditCustomerModal() {
   document.getElementById('edit-phone').value = currentCustomer.phone || '';
   setBirthdaySelects('edit', currentCustomer.birthday);
   document.getElementById('edit-memo').value = currentCustomer.memo || '';
+  document.getElementById('edit-is-new').checked = currentCustomer.is_new || false;
+  document.getElementById('edit-duration').value = currentCustomer.default_duration || 60;
+  document.getElementById('edit-plan').onchange = function() { document.getElementById('edit-duration').value = planToDuration(this.value); };
+  // 契約コース
+  const plan = currentCustomer.membership_plan || '';
+  const planSelect = document.getElementById('edit-plan');
+  const planCustom = document.getElementById('edit-plan-custom');
+  // セレクト���存在するか確認
+  const optionExists = Array.from(planSelect.options).some(o => o.value === plan);
+  if (optionExists) {
+    planSelect.value = plan;
+    planCustom.value = '';
+  } else {
+    planSelect.value = '';
+    planCustom.value = plan;
+  }
   document.getElementById('modal-edit-customer').classList.add('show');
 }
 
@@ -2582,12 +3183,17 @@ async function saveEditCustomer() {
   if (!name) { alert('名前を入力してください'); return; }
   showSaving('保存中...');
   const phone = normalizePhone(document.getElementById('edit-phone').value);
+  const planSelect = document.getElementById('edit-plan').value;
+  const planCustom = document.getElementById('edit-plan-custom').value.trim();
   const data = {
     name,
     name_kana: document.getElementById('edit-kana').value.trim(),
     phone,
     birthday: getBirthdayFromSelects('edit'),
     memo: document.getElementById('edit-memo').value,
+    membership_plan: planCustom || planSelect,
+    default_duration: parseInt(document.getElementById('edit-duration').value) || 60,
+    is_new: document.getElementById('edit-is-new').checked,
   };
   const result = await sbPatch('customers', `id=eq.${currentCustomer.id}`, data);
   if (result) {
@@ -2654,6 +3260,195 @@ function esc(s) {
   return d.innerHTML;
 }
 
+function planToDuration(plan) {
+  if (!plan) return 60;
+  if (plan.includes('ゴールド')) return 45;
+  if (plan.includes('プラチナ')) return 60;
+  if (plan.includes('ダイヤ')) return 70;
+  if (plan.includes('ヒゲ脱毛')) return 60;
+  return 60;
+}
+
+function customerBadges(c) {
+  let html = '';
+  if (c.is_new) html += '<span class="badge-new">NEW</span>';
+  if (c.birthday) {
+    const bd = new Date(c.birthday);
+    if (bd.getMonth() + 1 === new Date().getMonth() + 1) {
+      html += '<span class="badge-birthday">誕生月🎉</span>';
+    }
+  }
+  return html;
+}
+
+// ==================================
+// 朝の申し送りモーダル
+// ==================================
+function closeBriefing() {
+  document.getElementById('morning-briefing').classList.remove('show');
+}
+function dismissBriefing() {
+  localStorage.setItem('briefing_dismissed', todayStr());
+  closeBriefing();
+}
+
+async function showMorningBriefing() {
+  // 今日すでに非表示にしていたらスキップ
+  if (localStorage.getItem('briefing_dismissed') === todayStr()) return;
+
+  const today = todayStr();
+  const now = new Date();
+  const thisMonth = now.getMonth() + 1;
+  const thisYear = now.getFullYear();
+  const dayOfMonth = now.getDate();
+  const daysInMonth = new Date(thisYear, thisMonth, 0).getDate();
+  const remainingDays = daysInMonth - dayOfMonth;
+
+  // 本日の予約を取得
+  const todayRes = await sbGet('yoyaku_reservations',
+    `date=eq.${today}&type=eq.treatment&select=id,name,customer_id,menu,start_time`);
+
+  const alerts = [];
+
+  // ── 当日の注意事項 ──
+  const todayAlerts = [];
+
+  // 1. 誕生日のお客様
+  if (todayRes.length > 0) {
+    const customerIds = todayRes.filter(r => r.customer_id).map(r => r.customer_id);
+    if (customerIds.length > 0) {
+      const customers = await sbGet('customers', `id=in.(${customerIds.join(',')})&select=id,name,birthday`);
+      const birthdayCustomers = customers.filter(c => {
+        if (!c.birthday) return false;
+        const bd = new Date(c.birthday);
+        return bd.getMonth() + 1 === thisMonth && bd.getDate() === dayOfMonth;
+      });
+      birthdayCustomers.forEach(c => {
+        const res = todayRes.find(r => r.customer_id === c.id);
+        todayAlerts.push({
+          icon: '🎂',
+          title: `${c.name}さん お誕生日`,
+          detail: res ? `${res.start_time}〜 ${res.menu || ''}` : '',
+          color: '#E91E63'
+        });
+      });
+
+      // 2. 次回伝えることがあるお客様
+      for (const cid of customerIds) {
+        const lastRecords = await sbGet('karte_records',
+          `customer_id=eq.${cid}&next_note=neq.&order=date.desc&limit=1&select=next_note,date,customer_id`);
+        if (lastRecords.length > 0 && lastRecords[0].next_note) {
+          const cust = customers.find(c => c.id === cid);
+          const res = todayRes.find(r => r.customer_id === cid);
+          todayAlerts.push({
+            icon: '📋',
+            title: `${cust?.name || res?.name || '?'}さんに伝えること`,
+            detail: lastRecords[0].next_note,
+            color: '#C0392B'
+          });
+        }
+      }
+    }
+  }
+
+  // ── 要確認アラート（定額会員の来店状況） ──
+  const memberAlerts = [];
+  const ym = `${thisYear}-${String(thisMonth).padStart(2,'0')}`;
+
+  // 定額会員を取得
+  const members = await sbGet('customers', `membership_plan=neq.&select=id,name,membership_plan`);
+  if (members.length > 0) {
+    // 今月のカルテ記録を一括取得
+    const monthStart = `${ym}-01`;
+    const monthEnd = `${ym}-${String(daysInMonth).padStart(2,'0')}`;
+    const monthRecords = await sbGet('karte_records',
+      `date=gte.${monthStart}&date=lte.${monthEnd}&status=eq.complete&select=customer_id,date`);
+
+    // 今後の予約を確認
+    const futureRes = await sbGet('yoyaku_reservations',
+      `date=gte.${today}&date=lte.${monthEnd}&type=eq.treatment&select=customer_id,date`);
+
+    const visitCount = {};
+    monthRecords.forEach(r => {
+      visitCount[r.customer_id] = (visitCount[r.customer_id] || 0) + 1;
+    });
+
+    const futureBooking = {};
+    futureRes.forEach(r => {
+      if (r.customer_id) futureBooking[r.customer_id] = true;
+    });
+
+    for (const m of members) {
+      const max = m.membership_plan.includes('月2') ? 2 : m.membership_plan.includes('月1') ? 1 : 0;
+      if (max === 0) continue;
+      const visits = visitCount[m.id] || 0;
+      const remaining = max - visits;
+      if (remaining <= 0) continue; // 消化済みはOK
+
+      const hasBooking = futureBooking[m.id] || false;
+
+      // 月2: 2週間経過で0回来店（予約もなし）
+      if (max === 2 && dayOfMonth >= 15 && visits === 0 && !hasBooking) {
+        memberAlerts.push({
+          name: m.name,
+          plan: m.membership_plan,
+          detail: `月半ばで未来店（0/${max}回）・今後の予約なし`,
+          urgency: 'high'
+        });
+      }
+      // 月2: 残7日で1回しか来ていない（予約なし）
+      else if (max === 2 && remainingDays <= 7 && visits <= 1 && !hasBooking) {
+        memberAlerts.push({
+          name: m.name,
+          plan: m.membership_plan,
+          detail: `残${remainingDays}日で${visits}/${max}回・今後の予約なし`,
+          urgency: visits === 0 ? 'high' : 'medium'
+        });
+      }
+      // 月1: 残7日で未来店（予約なし）
+      else if (max === 1 && remainingDays <= 7 && visits === 0 && !hasBooking) {
+        memberAlerts.push({
+          name: m.name,
+          plan: m.membership_plan,
+          detail: `残${remainingDays}日で未来店・今後の予約なし`,
+          urgency: 'high'
+        });
+      }
+    }
+  }
+
+  // 何もなければ表示しない
+  if (todayAlerts.length === 0 && memberAlerts.length === 0) return;
+
+  // HTML構築
+  let html = '';
+
+  if (todayAlerts.length > 0) {
+    html += '<div style="font-size:13px;font-weight:700;color:var(--accent-dark);margin-bottom:8px;">本日の注意事項</div>';
+    todayAlerts.forEach(a => {
+      html += `<div class="card" style="border-left-color:${a.color};margin-bottom:8px;padding:10px 12px;">
+        <div style="font-size:14px;font-weight:700;">${a.icon} ${esc(a.title)}</div>
+        ${a.detail ? `<div style="font-size:13px;color:var(--sub);margin-top:2px;white-space:pre-wrap;">${esc(a.detail)}</div>` : ''}
+      </div>`;
+    });
+  }
+
+  if (memberAlerts.length > 0) {
+    html += '<div style="font-size:13px;font-weight:700;color:var(--accent-dark);margin:12px 0 8px;">要確認：定額会員の来店状況</div>';
+    memberAlerts.sort((a, b) => (a.urgency === 'high' ? 0 : 1) - (b.urgency === 'high' ? 0 : 1));
+    memberAlerts.forEach(a => {
+      const borderColor = a.urgency === 'high' ? '#C0392B' : '#E67E22';
+      html += `<div class="card" style="border-left-color:${borderColor};margin-bottom:6px;padding:8px 12px;">
+        <div style="font-size:13px;font-weight:700;">${esc(a.name)} <span style="font-size:11px;font-weight:400;color:var(--sub);">${esc(a.plan)}</span></div>
+        <div style="font-size:12px;color:${borderColor};margin-top:2px;">${esc(a.detail)}</div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('briefing-content').innerHTML = html;
+  document.getElementById('morning-briefing').classList.add('show');
+}
+
 // ==================================
 // 初期化
 // ==================================
@@ -2682,6 +3477,9 @@ async function init() {
   const cid = params.get('customer_id');
   if (cid) {
     openKarte(cid);
+  } else {
+    // 直接アクセス時のみ朝の申し送りを表示
+    showMorningBriefing();
   }
 }
 
