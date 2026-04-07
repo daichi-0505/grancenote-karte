@@ -1989,10 +1989,11 @@ async function loadKarteScreen() {
         const visibleItems = items.slice(0, 2);
         const hiddenItems = items.slice(2);
         const uid = 'pg-' + Math.random().toString(36).substr(2, 6);
-        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 16px;margin-bottom:8px;border-left:3px solid #5B9BD5;cursor:pointer;" onclick="showPurchaseDetail('${purchaseIds}','${item.date}')">
+        const cardColor = items.some(p => p.source === 'online') ? '#5B9BD5' : '#16A34A';
+        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 16px;margin-bottom:8px;border-left:3px solid ${cardColor};cursor:pointer;" onclick="showPurchaseDetail('${purchaseIds}','${item.date}')">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <div>
-              <span style="font-size:11px;font-weight:700;color:#5B9BD5;background:rgba(91,155,213,0.1);padding:2px 8px;border-radius:4px;">購入</span>
+              <span style="font-size:11px;font-weight:700;color:${cardColor};background:${cardColor}18;padding:2px 8px;border-radius:4px;">購入</span>
               <span style="font-size:12px;color:var(--sub);margin-left:6px;">${fmtDateFull(item.date)}</span>
             </div>
             <span style="font-size:12px;color:var(--sub);">${items.length}点 / ¥${totalExcl.toLocaleString()} <span style="font-size:9px;">(税抜)</span></span>
@@ -2023,7 +2024,7 @@ async function loadKarteScreen() {
               }).join('')}
             </div>
             <div style="text-align:center;padding:4px 0;border-top:1px solid var(--border-list);">
-              <button onclick="event.stopPropagation();const el=document.getElementById('${uid}');const show=el.style.display==='none';el.style.display=show?'':'none';this.textContent=show?'▲ 閉じる':'▼ 他${hiddenItems.length}件を表示';" style="background:none;border:none;color:#5B9BD5;font-size:12px;font-weight:600;cursor:pointer;">▼ 他${hiddenItems.length}件を表示</button>
+              <button onclick="event.stopPropagation();const el=document.getElementById('${uid}');const show=el.style.display==='none';el.style.display=show?'':'none';this.textContent=show?'▲ 閉じる':'▼ 他${hiddenItems.length}件を表示';" style="background:none;border:none;color:${cardColor};font-size:12px;font-weight:600;cursor:pointer;">▼ 他${hiddenItems.length}件を表示</button>
             </div>
           ` : ''}
         </div>`;
@@ -2861,6 +2862,20 @@ async function deletePurchaseGroup() {
   loadKarteScreen();
 }
 
+// 購入アイテム1行の描画（全購入記録タブ用）
+function renderPurchaseItem(p, today) {
+  const days = p.purchased_at ? Math.floor((today - new Date(p.purchased_at)) / 86400000) : null;
+  const exclPrice = Math.round((p.price || 0) / 1.1);
+  return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border-list);">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.product_name)}</div>
+      <div style="font-size:11px;color:var(--sub);">${days !== null ? days+'日前' : ''}</div>
+    </div>
+    ${p.price ? `<div style="font-size:13px;font-weight:600;white-space:nowrap;">¥${exclPrice.toLocaleString()} <span style="font-size:9px;color:var(--muted);font-weight:400;">(税抜)</span></div>` : ''}
+    <button onclick="deletePurchase('${p.id}')" style="background:none;border:none;color:var(--danger);font-size:16px;cursor:pointer;padding:0 4px;">&times;</button>
+  </div>`;
+}
+
 // 購入タブの読み込み
 async function loadPurchases(customerId) {
   const purchases = await sbGet('karte_purchases',
@@ -2929,23 +2944,22 @@ async function loadPurchases(customerId) {
         ${Object.entries(grouped).map(([date, items]) => {
           const dateLabel = date !== '不明' ? fmtDateFull(date) : '日付不明';
           const totalExcl = items.reduce((s, p) => s + Math.round((p.price || 0) / 1.1), 0);
+          const visItems = items.slice(0, 2);
+          const hidItems = items.slice(2);
+          const auid = 'ap-' + Math.random().toString(36).substr(2, 6);
+          const renderPurchItem = (p) => renderPurchaseItem(p, today);
           return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.04);border-left:3px solid ${cat.color};">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <span style="font-size:13px;font-weight:700;color:var(--accent-dark);">${dateLabel}</span>
               <span style="font-size:12px;color:var(--sub);">${items.length}点 / ¥${totalExcl.toLocaleString()} <span style="font-size:9px;">(税抜)</span></span>
             </div>
-            ${items.map(p => {
-              const days = p.purchased_at ? Math.floor((today - new Date(p.purchased_at)) / 86400000) : null;
-              const exclPrice = Math.round((p.price || 0) / 1.1);
-              return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border-list);">
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.product_name)}</div>
-                  <div style="font-size:11px;color:var(--sub);">${days !== null ? days+'日前' : ''}</div>
-                </div>
-                ${p.price ? `<div style="font-size:13px;font-weight:600;white-space:nowrap;">¥${exclPrice.toLocaleString()} <span style="font-size:9px;color:var(--muted);font-weight:400;">(税抜)</span></div>` : ''}
-                <button onclick="deletePurchase('${p.id}')" style="background:none;border:none;color:var(--danger);font-size:16px;cursor:pointer;padding:0 4px;">&times;</button>
-              </div>`;
-            }).join('')}
+            ${visItems.map(renderPurchItem).join('')}
+            ${hidItems.length > 0 ? `
+              <div id="${auid}" style="display:none;">${hidItems.map(renderPurchItem).join('')}</div>
+              <div style="text-align:center;padding:4px 0;border-top:1px solid var(--border-list);">
+                <button onclick="const el=document.getElementById('${auid}');const show=el.style.display==='none';el.style.display=show?'':'none';this.textContent=show?'▲ 閉じる':'▼ 他${hidItems.length}件を表示';" style="background:none;border:none;color:${cat.color};font-size:12px;font-weight:600;cursor:pointer;">▼ 他${hidItems.length}件を表示</button>
+              </div>
+            ` : ''}
           </div>`;
         }).join('')}
       </div>`;
