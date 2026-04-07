@@ -2889,32 +2889,63 @@ async function loadPurchases(customerId) {
   if (purchases.length === 0) {
     list.innerHTML = '<div class="empty-state">購入履歴がありません</div>';
   } else {
-    // 日付でグループ化
-    const grouped = {};
+    // 施術記録の日付を取得（施術日購入の判定用）
+    const records = await sbGet('karte_records', `customer_id=eq.${customerId}&select=date`);
+    const recordDates = new Set(records.map(r => r.date));
+
+    // 購入を分類: 施術日購入 / 店頭購入 / 通販サイト購入
+    const categorized = { treatment: [], store: [], online: [] };
     purchases.forEach(p => {
-      const dk = p.purchased_at || '不明';
-      if (!grouped[dk]) grouped[dk] = [];
-      grouped[dk].push(p);
+      if (p.source === 'online') {
+        categorized.online.push(p);
+      } else if (p.purchased_at && recordDates.has(p.purchased_at)) {
+        categorized.treatment.push(p);
+      } else {
+        categorized.store.push(p);
+      }
     });
-    list.innerHTML = Object.entries(grouped).map(([date, items]) => {
-      const dateLabel = date !== '不明' ? fmtDateFull(date) : '日付不明';
-      const totalExcl = items.reduce((s, p) => s + Math.round((p.price || 0) / 1.1), 0);
-      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <span style="font-size:13px;font-weight:700;color:var(--accent-dark);">${dateLabel}</span>
-          <span style="font-size:12px;color:var(--sub);">${items.length}点 / ¥${totalExcl.toLocaleString()} <span style="font-size:9px;">(税抜)</span></span>
+
+    const categoryConfig = [
+      { key: 'treatment', label: '施術日購入', color: 'var(--accent)', bg: 'rgba(196,169,125,0.1)', items: categorized.treatment },
+      { key: 'store', label: '店頭購入', color: '#16A34A', bg: 'rgba(22,163,74,0.1)', items: categorized.store },
+      { key: 'online', label: '通販サイト購入', color: '#5B9BD5', bg: 'rgba(91,155,213,0.1)', items: categorized.online },
+    ];
+
+    list.innerHTML = categoryConfig.filter(c => c.items.length > 0).map(cat => {
+      // カテゴリ内を日付でグループ化
+      const grouped = {};
+      cat.items.forEach(p => {
+        const dk = p.purchased_at || '不明';
+        if (!grouped[dk]) grouped[dk] = [];
+        grouped[dk].push(p);
+      });
+      const catTotal = cat.items.reduce((s, p) => s + Math.round((p.price || 0) / 1.1), 0);
+
+      return `<div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:0 2px;">
+          <span style="font-size:12px;font-weight:700;color:${cat.color};background:${cat.bg};padding:3px 10px;border-radius:6px;">${cat.label}</span>
+          <span style="font-size:11px;color:var(--sub);">${cat.items.length}件 / ¥${catTotal.toLocaleString()} (税抜)</span>
         </div>
-        ${items.map(p => {
-          const days = p.purchased_at ? Math.floor((today - new Date(p.purchased_at)) / 86400000) : null;
-          const src = p.source === 'online' ? 'STORES' : '店頭';
-          const exclPrice = Math.round((p.price || 0) / 1.1);
-          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border-list);">
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.product_name)}</div>
-              <div style="font-size:11px;color:var(--sub);">${src}${p.auto_imported ? ' 自動' : ''}${days !== null ? ' / '+days+'日前' : ''}</div>
+        ${Object.entries(grouped).map(([date, items]) => {
+          const dateLabel = date !== '不明' ? fmtDateFull(date) : '日付不明';
+          const totalExcl = items.reduce((s, p) => s + Math.round((p.price || 0) / 1.1), 0);
+          return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.04);border-left:3px solid ${cat.color};">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span style="font-size:13px;font-weight:700;color:var(--accent-dark);">${dateLabel}</span>
+              <span style="font-size:12px;color:var(--sub);">${items.length}点 / ¥${totalExcl.toLocaleString()} <span style="font-size:9px;">(税抜)</span></span>
             </div>
-            ${p.price ? `<div style="font-size:13px;font-weight:600;white-space:nowrap;">¥${exclPrice.toLocaleString()} <span style="font-size:9px;color:var(--muted);font-weight:400;">(税抜)</span></div>` : ''}
-            <button onclick="deletePurchase('${p.id}')" style="background:none;border:none;color:var(--danger);font-size:16px;cursor:pointer;padding:0 4px;">&times;</button>
+            ${items.map(p => {
+              const days = p.purchased_at ? Math.floor((today - new Date(p.purchased_at)) / 86400000) : null;
+              const exclPrice = Math.round((p.price || 0) / 1.1);
+              return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border-list);">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.product_name)}</div>
+                  <div style="font-size:11px;color:var(--sub);">${days !== null ? days+'日前' : ''}</div>
+                </div>
+                ${p.price ? `<div style="font-size:13px;font-weight:600;white-space:nowrap;">¥${exclPrice.toLocaleString()} <span style="font-size:9px;color:var(--muted);font-weight:400;">(税抜)</span></div>` : ''}
+                <button onclick="deletePurchase('${p.id}')" style="background:none;border:none;color:var(--danger);font-size:16px;cursor:pointer;padding:0 4px;">&times;</button>
+              </div>`;
+            }).join('')}
           </div>`;
         }).join('')}
       </div>`;
