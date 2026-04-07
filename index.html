@@ -753,29 +753,28 @@ body {
 
   <!-- サマリーカード -->
   <div class="card" id="karte-summary" style="border-left-color: var(--accent);">
-    <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px; cursor:pointer;" onclick="showProfileDetail()">
       <div class="avatar" id="karte-avatar" style="width:52px;height:52px;border-radius:26px;font-size:20px;"></div>
       <div style="flex:1;">
         <div style="font-size:18px; font-weight:700;" id="karte-summary-name"></div>
         <div id="karte-plan-badge" style="margin:2px 0 4px;"></div>
         <div style="font-size:14px; color:var(--sub);" id="karte-summary-info"></div>
       </div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
     </div>
     <div id="karte-staff-memo" class="staff-memo-box" style="margin:0 0 12px;"></div>
     <div id="karte-courses" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
     <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
       <button class="btn btn-sm btn-outline" onclick="showAddCourseModal()">+ コース追加</button>
       <button class="btn btn-sm btn-outline" onclick="showAddPurchaseModal()">+ 購入追加</button>
-      <button class="btn btn-sm btn-outline" onclick="showAddAdsModal()">+ ADS</button>
     </div>
   </div>
 
   <!-- タブ -->
   <div class="tabs">
-    <div class="tab active" data-tab="history" onclick="switchTab(this)">施術＆購入</div>
+    <div class="tab active" data-tab="history" onclick="switchTab(this)">施術＆購入履歴</div>
+    <div class="tab" data-tab="purchases" onclick="switchTab(this)">購入記録</div>
     <div class="tab" data-tab="photos" onclick="switchTab(this)">写真</div>
-    <div class="tab" data-tab="purchases" onclick="switchTab(this)">購入のみ</div>
-    <div class="tab" data-tab="ads" onclick="switchTab(this)">ADS</div>
   </div>
 
   <!-- 施術履歴タブ（カード形式） -->
@@ -808,16 +807,41 @@ body {
     </div>
   </div>
 
-  <!-- ADSタブ -->
-  <div id="tab-ads" class="tab-content" style="display:none; margin:12px 16px;">
-    <div id="ads-list"></div>
-    <div style="margin-top:12px;">
-      <button class="btn btn-outline btn-block btn-sm" onclick="showAddAdsModal()">+ ADS登録</button>
-    </div>
-  </div>
-
   <div style="padding:16px;">
     <button class="btn btn-primary btn-block" onclick="showRecordForm()">+ 施術記録を追加</button>
+  </div>
+</div>
+
+<!-- ===== 画面2.1: プロフィール詳細 ===== -->
+<div id="screen-profile" class="screen">
+  <div class="header">
+    <button class="header-back" onclick="goBack()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B7355" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="header-title" id="profile-title">プロフィール</div>
+  </div>
+
+  <!-- 顧客情報 -->
+  <div class="card" style="border-left-color:var(--accent);">
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+      <div class="avatar" id="profile-avatar" style="width:56px;height:56px;border-radius:28px;font-size:22px;"></div>
+      <div style="flex:1;">
+        <div style="font-size:20px; font-weight:700;" id="profile-name"></div>
+        <div id="profile-plan-badge" style="margin:4px 0;"></div>
+      </div>
+    </div>
+    <div id="profile-info" style="font-size:14px; color:var(--sub); line-height:1.8;"></div>
+    <div id="profile-memo" class="staff-memo-box" style="margin-top:10px;"></div>
+  </div>
+
+  <!-- ADS美肌再生プログラム -->
+  <div class="card" style="border-left-color:#D4A76A;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div class="card-title" style="margin:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4A76A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        ADS美肌再生プログラム
+      </div>
+      <button class="btn btn-sm btn-outline" onclick="showAddAdsModal()">+ 登録</button>
+    </div>
+    <div id="profile-ads-list"></div>
   </div>
 </div>
 
@@ -1977,7 +2001,6 @@ function switchTab(el) {
   if (currentCustomer) {
     if (el.dataset.tab === 'photos') loadPhotoTimeline(currentCustomer.id);
     if (el.dataset.tab === 'purchases') loadPurchases(currentCustomer.id);
-    if (el.dataset.tab === 'ads') loadAds(currentCustomer.id);
   }
 }
 
@@ -2775,6 +2798,40 @@ async function loadPurchases(customerId) {
 }
 
 // ==================================
+// プロフィール詳細
+// ==================================
+function showProfileDetail() {
+  if (!currentCustomer) return;
+  const c = currentCustomer;
+  document.getElementById('profile-title').textContent = c.name;
+  document.getElementById('profile-avatar').textContent = c.name.charAt(0);
+  document.getElementById('profile-name').textContent = c.name;
+
+  // プランバッジ
+  let planHtml = c.membership_plan ? `<span class="plan-badge">${esc(c.membership_plan)}</span>` : '';
+  if (c.default_duration) planHtml += ` <span class="monthly-visits">${c.default_duration}分</span>`;
+  document.getElementById('profile-plan-badge').innerHTML = planHtml;
+
+  // 情報
+  const lines = [];
+  if (c.birthday) lines.push(`誕生日: ${fmtBirthday(c.birthday)}`);
+  if (c.phone) lines.push(`電話: ${formatPhone(c.phone)}`);
+  if (c.email) lines.push(`メール: ${esc(c.email)}`);
+  if (c.address) lines.push(`住所: ${esc(c.address)}`);
+  document.getElementById('profile-info').innerHTML = lines.join('<br>');
+
+  // メモ
+  const memoEl = document.getElementById('profile-memo');
+  if (c.memo) { memoEl.textContent = c.memo; memoEl.style.display = ''; }
+  else memoEl.style.display = 'none';
+
+  // ADS読み込み
+  loadAds(c.id);
+
+  showScreen('profile');
+}
+
+// ==================================
 // ADS管理
 // ==================================
 let editingAdsId = null;
@@ -2830,7 +2887,7 @@ async function saveAds() {
 async function loadAds(customerId) {
   const records = await sbGet('karte_ads_progress',
     `customer_id=eq.${customerId}&order=step_number`);
-  const list = document.getElementById('ads-list');
+  const list = document.getElementById('profile-ads-list');
   if (records.length === 0) {
     list.innerHTML = '<div class="empty-state">ADS登録がありません</div>';
     return;
