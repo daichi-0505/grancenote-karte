@@ -645,47 +645,31 @@ body {
   .schedule-card { margin-bottom: 0; }
 }
 
-/* PIN認証画面 */
-#pin-screen { position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; }
-#pin-screen.hidden { display:none; }
-.pin-logo { font-size:22px; font-weight:800; color:var(--accent); letter-spacing:2px; margin-bottom:4px; }
-.pin-sub { font-size:13px; color:var(--sub); margin-bottom:28px; }
-.pin-dots { display:flex; gap:14px; margin-bottom:28px; }
-.pin-dot { width:16px; height:16px; border-radius:50%; border:2px solid var(--accent); background:transparent; transition:background 0.15s; }
-.pin-dot.filled { background:var(--accent); }
-.pin-error { font-size:13px; color:var(--danger); height:20px; margin-bottom:12px; }
-.pin-pad { display:grid; grid-template-columns:repeat(3,72px); gap:10px; }
-.pin-key { width:72px; height:52px; border-radius:12px; border:1px solid var(--border); background:var(--surface); font-size:22px; font-weight:600; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center; }
-.pin-key:active { background:var(--accent-40); }
-.pin-key.empty { visibility:hidden; }
+/* ログイン認証画面 */
+#login-screen { position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#login-screen.hidden { display:none; }
+.login-logo { font-size:22px; font-weight:800; color:var(--accent); letter-spacing:2px; margin-bottom:4px; }
+.login-sub { font-size:13px; color:var(--sub); margin-bottom:28px; }
+.login-form { display:flex; flex-direction:column; gap:12px; width:280px; }
+.login-input { width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); font-size:15px; color:var(--text); box-sizing:border-box; }
+.login-input:focus { outline:none; border-color:var(--accent); }
+.login-btn { padding:13px; border-radius:10px; border:none; background:var(--accent); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+.login-btn:active { opacity:0.8; }
+.login-btn:disabled { opacity:0.5; cursor:not-allowed; }
+.login-error { font-size:13px; color:var(--danger); height:20px; text-align:center; }
 </style>
 </head>
 <body>
 
-<!-- ===== PIN認証画面 ===== -->
-<div id="pin-screen">
-  <div class="pin-logo">Gran Cenote</div>
-  <div class="pin-sub">スタッフ認証</div>
-  <div class="pin-dots">
-    <div class="pin-dot" id="pd0"></div>
-    <div class="pin-dot" id="pd1"></div>
-    <div class="pin-dot" id="pd2"></div>
-    <div class="pin-dot" id="pd3"></div>
-  </div>
-  <div class="pin-error" id="pin-error"></div>
-  <div class="pin-pad">
-    <div class="pin-key" onclick="pinInput('1')">1</div>
-    <div class="pin-key" onclick="pinInput('2')">2</div>
-    <div class="pin-key" onclick="pinInput('3')">3</div>
-    <div class="pin-key" onclick="pinInput('4')">4</div>
-    <div class="pin-key" onclick="pinInput('5')">5</div>
-    <div class="pin-key" onclick="pinInput('6')">6</div>
-    <div class="pin-key" onclick="pinInput('7')">7</div>
-    <div class="pin-key" onclick="pinInput('8')">8</div>
-    <div class="pin-key" onclick="pinInput('9')">9</div>
-    <div class="pin-key empty"></div>
-    <div class="pin-key" onclick="pinInput('0')">0</div>
-    <div class="pin-key" onclick="pinDelete()" style="font-size:14px;font-weight:400;">削除</div>
+<!-- ===== ログイン認証画面 ===== -->
+<div id="login-screen">
+  <div class="login-logo">Gran Cenote</div>
+  <div class="login-sub">スタッフ認証</div>
+  <div class="login-form">
+    <input type="email" id="login-email" class="login-input" placeholder="メールアドレス" autocomplete="email">
+    <input type="password" id="login-password" class="login-input" placeholder="パスワード" autocomplete="current-password">
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">ログイン</button>
   </div>
 </div>
 
@@ -1416,49 +1400,76 @@ body {
 </div>
 
 <script>
-// ── PIN認証 ──
-const APP_PIN = '3141';
-const PIN_KEY = 'pin_karte'; // アプリごとに別キー
-let pinValue = '';
-
-function pinInput(n) {
-  if (pinValue.length >= 4) return;
-  pinValue += n;
-  for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.toggle('filled', i < pinValue.length);
-  document.getElementById('pin-error').textContent = '';
-  if (pinValue.length === 4) {
-    setTimeout(() => {
-      if (pinValue === APP_PIN) {
-        localStorage.setItem(PIN_KEY, APP_PIN);
-        document.getElementById('pin-screen').classList.add('hidden');
-      } else {
-        document.getElementById('pin-error').textContent = 'PINが違います';
-        pinValue = '';
-        for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.remove('filled');
-      }
-    }, 200);
-  }
-}
-function pinDelete() {
-  if (pinValue.length > 0) {
-    pinValue = pinValue.slice(0, -1);
-    for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.toggle('filled', i < pinValue.length);
-  }
-}
-// 認証済み（かつPINが変更されていない）ならPIN画面を非表示
-if (localStorage.getItem(PIN_KEY) === APP_PIN) {
-  document.getElementById('pin-screen').classList.add('hidden');
-}
-
 // ── Supabase API設定 ──
 const SUPABASE_URL = 'https://lheojchyrxjlagxfbgjo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_sV418nh9Akoc0EnxchRU4g_H2FFAa-4';
-const SB_HEADERS = {
-  'apikey': SUPABASE_KEY,
-  'Authorization': 'Bearer ' + SUPABASE_KEY,
-  'Content-Type': 'application/json',
-  'Prefer': 'return=representation'
-};
+let AUTH_TOKEN = null; // ログイン後にセットされる
+
+function getSbHeaders(contentType) {
+  const h = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + (AUTH_TOKEN || SUPABASE_KEY) };
+  if (contentType) h['Content-Type'] = contentType;
+  return h;
+}
+function getSbHeadersFull() {
+  return { ...getSbHeaders('application/json'), 'Prefer': 'return=representation' };
+}
+
+// ── ログイン認証 ──
+const SESSION_KEY = 'sb_session_karte';
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  errEl.textContent = '';
+  if (!email || !pw) { errEl.textContent = '入力してください'; return; }
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pw })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = 'メールアドレスまたはパスワードが違います'; btn.disabled = false; return; }
+    AUTH_TOKEN = data.access_token;
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 }));
+    document.getElementById('login-screen').classList.add('hidden');
+  } catch (e) {
+    errEl.textContent = '通信エラー';
+  }
+  btn.disabled = false;
+}
+
+async function refreshSession() {
+  const stored = localStorage.getItem(SESSION_KEY);
+  if (!stored) return false;
+  const session = JSON.parse(stored);
+  if (Date.now() < session.expires_at - 60000) {
+    AUTH_TOKEN = session.access_token;
+    return true;
+  }
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: session.refresh_token })
+    });
+    if (!res.ok) { localStorage.removeItem(SESSION_KEY); return false; }
+    const data = await res.json();
+    AUTH_TOKEN = data.access_token;
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 }));
+    return true;
+  } catch (e) { return false; }
+}
+
+// 起動時にセッション復元
+(async () => {
+  if (await refreshSession()) {
+    document.getElementById('login-screen').classList.add('hidden');
+  }
+})();
 
 // ── 状態管理 ──
 let currentCustomer = null;  // 現在表示中の顧客
@@ -1481,7 +1492,7 @@ function hideSaving() {
 // ── Supabase REST API ──
 async function sbGet(table, query) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    headers: getSbHeaders()
   });
   if (!res.ok) { console.error(`GET ${table} failed:`, res.status); return []; }
   return res.json();
@@ -1489,7 +1500,7 @@ async function sbGet(table, query) {
 
 async function sbPost(table, data) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-    method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data)
+    method: 'POST', headers: getSbHeadersFull(), body: JSON.stringify(data)
   });
   if (!res.ok) { console.error(`POST ${table} failed:`, res.status, await res.text()); return null; }
   const arr = await res.json();
@@ -1498,7 +1509,7 @@ async function sbPost(table, data) {
 
 async function sbPatch(table, query, data) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
-    method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(data)
+    method: 'PATCH', headers: getSbHeadersFull(), body: JSON.stringify(data)
   });
   if (!res.ok) { console.error(`PATCH ${table} failed:`, res.status); return null; }
   const arr = await res.json();
@@ -1508,7 +1519,7 @@ async function sbPatch(table, query, data) {
 async function sbDelete(table, query) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
     method: 'DELETE',
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    headers: getSbHeaders()
   });
   return res.ok;
 }
@@ -2300,9 +2311,7 @@ async function uploadPhoto(blob, customerId, recordId, index) {
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/karte-photos/${path}`, {
     method: 'POST',
     headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'image/webp',
+      ...getSbHeaders('image/webp'),
       'x-upsert': 'true'
     },
     body: blob
