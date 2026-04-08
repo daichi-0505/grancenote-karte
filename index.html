@@ -1436,6 +1436,7 @@ async function doLogin() {
     AUTH_TOKEN = data.access_token;
     localStorage.setItem(SESSION_KEY, JSON.stringify({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 }));
     document.getElementById('login-screen').classList.add('hidden');
+    init();
   } catch (e) {
     errEl.textContent = '通信エラー';
   }
@@ -1464,12 +1465,7 @@ async function refreshSession() {
   } catch (e) { return false; }
 }
 
-// 起動時にセッション復元
-(async () => {
-  if (await refreshSession()) {
-    document.getElementById('login-screen').classList.add('hidden');
-  }
-})();
+// セッション復元は init() から呼び出す
 
 // ── 状態管理 ──
 let currentCustomer = null;  // 現在表示中の顧客
@@ -3764,6 +3760,13 @@ async function showMorningBriefing() {
 // 初期化
 // ==================================
 async function init() {
+  // セッション復元
+  if (await refreshSession()) {
+    document.getElementById('login-screen').classList.add('hidden');
+  }
+  // ログインしていない場合はデータ取得しない
+  if (!AUTH_TOKEN) return;
+
   // 予約帳のスタッフ・部屋マスタを取得（共有テーブル参照）
   [staffList, roomList] = await Promise.all([
     sbGet('yoyaku_staff', 'order=sort_order'),
