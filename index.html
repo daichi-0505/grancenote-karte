@@ -1466,6 +1466,8 @@ async function refreshSession() {
 }
 
 // セッション復元は init() から呼び出す
+// 45分ごとにトークンを自動更新（有効期限1時間）
+setInterval(() => { if (AUTH_TOKEN) refreshSession(); }, 45 * 60 * 1000);
 
 // ── 状態管理 ──
 let currentCustomer = null;  // 現在表示中の顧客
