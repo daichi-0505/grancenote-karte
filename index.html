@@ -3736,10 +3736,11 @@ async function init() {
   if (!AUTH_TOKEN) return;
 
   // 予約帳のスタッフ・部屋マスタを取得（共有テーブル参照）
-  [staffList, roomList] = await Promise.all([
+  const [rawStaffList, roomList] = await Promise.all([
     sbGet('yoyaku_staff', 'order=sort_order'),
     sbGet('yoyaku_rooms', 'order=sort_order'),
   ]);
+  staffList = (rawStaffList || []).filter(s => s.id !== 's5');
 
   // スタッフ選択肢を構築
   const staffSelect = document.getElementById('rec-staff');
