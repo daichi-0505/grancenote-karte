@@ -1439,6 +1439,16 @@ async function refreshSession() {
 let currentCustomer = null;  // 現在表示中の顧客
 let editingRecordId = null;  // 編集中の施術記録ID
 let staffList = [];          // yoyaku_staffから取得
+// 退職者: 担当プルダウンの新規候補から除外する（staffListには残すので担当名の表示・履歴は維持）。
+// keepId に現在の担当を渡すと、その退職者だけ選択肢に残す（既存カルテを再保存しても担当が消えない）。
+const RETIRED_STAFF_IDS = ['s2']; // リンション（2026年7月末退職）
+function buildRecStaffOptions(keepId) {
+  const sel = document.getElementById('rec-staff');
+  if (!sel) return;
+  const list = staffList.filter(s => !RETIRED_STAFF_IDS.includes(s.id) || s.id === keepId);
+  sel.innerHTML = '<option value="">選択してください</option>' +
+    list.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+}
 let roomList = [];           // yoyaku_roomsから取得
 let pendingPhotos = [];      // アップロード待ちの写真 [{file, type, angle, dataUrl}]
 let isSaving = false;        // 二重送信防止フラグ
@@ -2096,6 +2106,7 @@ function showRecordForm(recordId) {
   document.getElementById('rec-date').value = todayStr();
   document.getElementById('rec-menu').value = '';
   document.getElementById('rec-duration').value = '';
+  buildRecStaffOptions();
   document.getElementById('rec-staff').value = '';
   document.getElementById('rec-room').value = '';
   document.getElementById('rec-skin').value = '';
@@ -2128,6 +2139,7 @@ async function loadRecordForEdit(id) {
   document.getElementById('rec-date').value = r.date || '';
   document.getElementById('rec-menu').value = r.menu || '';
   document.getElementById('rec-duration').value = r.duration_min || '';
+  buildRecStaffOptions(r.staff_id);  // 退職者担当の既存カルテでも担当を保持
   document.getElementById('rec-staff').value = r.staff_id || '';
   document.getElementById('rec-room').value = r.room_id || '';
   document.getElementById('rec-skin').value = r.skin_condition || '';
@@ -3742,10 +3754,8 @@ async function init() {
   ]);
   staffList = (rawStaffList || []).filter(s => s.id !== 's5');
 
-  // スタッフ選択肢を構築
-  const staffSelect = document.getElementById('rec-staff');
-  staffSelect.innerHTML = '<option value="">選択してください</option>' +
-    staffList.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  // スタッフ選択肢を構築（退職者は新規候補から除外）
+  buildRecStaffOptions();
 
   // 部屋選択肢を構築
   const roomSelect = document.getElementById('rec-room');
